@@ -1,0 +1,11 @@
+[project]
+name = "soma-recommender-backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "packages/agent",
+    "packages/shared"
+]

@@ -1,0 +1,31 @@
+version = 1
+revision = 3
+requires-python = ">=3.11"
+
+[manifest]
+members = [
+    "soma-agent",
+    "soma-api",
+    "soma-recommender-backend",
+    "soma-shared",
+]
+
+[[package]]
+name = "soma-agent"
+version = "0.1.0"
+source = { virtual = "packages/agent" }
+
+[[package]]
+name = "soma-api"
+version = "0.1.0"
+source = { virtual = "apps/api" }
+
+[[package]]
+name = "soma-recommender-backend"
+version = "0.1.0"
+source = { virtual = "." }
+
+[[package]]
+name = "soma-shared"
+version = "0.1.0"
+source = { virtual = "packages/shared" }
