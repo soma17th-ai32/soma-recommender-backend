@@ -88,6 +88,7 @@ AI 참고 문서:
 9. `SWM_DETAIL_REFRESH_INTERVAL_SECONDS` 초 안에 이미 확인한 기존 특강은 상세 재조회를 생략할 수 있습니다.
 10. 제목 또는 설명이 바뀐 특강은 `content_hash` 변경으로 감지합니다.
 11. 신규 또는 변경 특강은 Upstage embedding을 생성해서 pgvector에 저장합니다.
+12. 제목이 비어 있는 상세 페이지는 저장하지 않습니다. 설명은 비어 있어도 저장합니다.
 
 ## 상태 갱신 규칙
 

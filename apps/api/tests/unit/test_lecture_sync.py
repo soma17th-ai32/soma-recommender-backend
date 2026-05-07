@@ -134,14 +134,8 @@ def test_validate_lecture_detail_fields_rejects_empty_title() -> None:
 
 
 def test_validate_lecture_detail_fields_rejects_empty_description() -> None:
-    # 빈 설명은 의미 없는 embedding을 만들기 때문에 API 호출 전에 실패시킨다.
-    try:
-        _validate_lecture_detail_fields("10268", "title", "")
-    except RuntimeError as error:
-        assert "description was empty" in str(error)
-        assert "10268" in str(error)
-    else:
-        raise AssertionError("Expected RuntimeError")
+    # SOMA 실제 데이터에는 본문이 빈 특강도 있으므로 제목만 있으면 sync 대상에 포함한다.
+    _validate_lecture_detail_fields("10268", "title", "")
 
 
 def test_should_skip_detail_refresh_when_seen_recently() -> None:

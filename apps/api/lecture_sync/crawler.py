@@ -134,7 +134,7 @@ def fetch_lecture_detail(
     source_id = _extract_detail_source_id(soup) or extract_source_id(detail_url)
     title = _extract_detail_title(soup)
     description = _extract_detail_description(soup)
-    # 빈 제목/설명은 가비지 row와 불필요한 embedding 호출을 만들기 전에 차단한다.
+    # 제목이 비어 있으면 강의를 식별하기 어려우므로 저장 전에 차단한다.
     _validate_lecture_detail_fields(source_id, title, description)
     return LectureDetail(
         source_id=source_id,
@@ -150,8 +150,6 @@ def _validate_lecture_detail_fields(source_id: str, title: str, description: str
 
     if not title:
         raise RuntimeError(f"SOMA lecture detail title was empty: source_id={source_id}")
-    if not description:
-        raise RuntimeError(f"SOMA lecture detail description was empty: source_id={source_id}")
 
 
 def fetch_lecture_data(

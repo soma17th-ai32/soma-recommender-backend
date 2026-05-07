@@ -93,7 +93,8 @@ DB sync 실행:
 
 - 상세 페이지에서 읽은 embedding 대상 정보
 - `source_id`, `title`, `description`, `detail_url`, `content_hash`
-- `title` 또는 `description`이 비어 있으면 저장/임베딩 전에 `RuntimeError`
+- `title`이 비어 있으면 저장/임베딩 전에 `RuntimeError`
+- `description`은 SOMA 실제 데이터에서 비어 있을 수 있어 빈 문자열도 허용
 
 `LectureData`
 
@@ -158,7 +159,7 @@ DB sync 실행:
 - 크롤링 HTML selector는 소마 페이지 구조에 의존합니다.
 - 소마 로그인은 `form#login_form`과 `/sw/member/user/checkStat.json` 호출에 의존합니다.
 - 상세 설명은 `.bbs-view-new > .cont`, `.bbs-view-new .cont`에서 추출합니다.
-- 상세 제목 또는 설명이 비면 DB 저장과 embedding 생성을 중단합니다.
+- 상세 제목이 비면 DB 저장과 embedding 생성을 중단합니다. 설명은 비어 있어도 저장합니다.
 - embedding은 제목과 설명만 사용합니다. 작성자, 일시, 접수 기간은 embedding 대상이 아닙니다.
 - `content_hash`가 바뀐 경우 기존 embedding을 `NULL`로 비운 뒤 재생성합니다.
 - `sync_lecture()`는 한 번 연 DB connection을 repository 함수들에 전달합니다.
