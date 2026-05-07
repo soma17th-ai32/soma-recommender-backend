@@ -6,8 +6,8 @@ from soma_agent.common.schemas import History
 from soma_agent.common.schemas import RecommendationItem
 from soma_agent.common.schemas import RecommendationRequest
 from soma_agent.common.schemas import RecommendationResult
-from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
 from soma_agent.jjjjjk12.history_preprocessor import prepare_histories
+from soma_agent.jjjjjk12.ranker import rank_candidates
 from soma_agent.jjjjjk12.rules import filter_recommendable_candidates
 from soma_agent.jjjjjk12.schemas import InterestProfile
 from soma_agent.jjjjjk12.schemas import LectureCandidate
@@ -87,22 +87,7 @@ class Jjjjjk12RecommendationWorkflow:
     ) -> list[ScoredCandidate]:
         """후보를 점수순으로 정렬하고 Top-K만 남긴다."""
 
-        if not candidates:
-            raise NoRecommendationFoundError("추천 가능한 후보가 없습니다.")
-        scored_candidates = self._score_candidates(candidates)
-        sorted_candidates = sorted(scored_candidates, key=self._score_key, reverse=True)
-        return sorted_candidates[:limit]
-
-    def _score_candidates(
-        self,
-        candidates: list[LectureCandidate],
-    ) -> list[ScoredCandidate]:
-        """VectorDB 점수를 최종 점수로 사용한다."""
-
-        result = []
-        for candidate in candidates:
-            result.append(ScoredCandidate(candidate, candidate.score))
-        return result
+        return rank_candidates(candidates, limit)
 
     def _build_items(
         self,
@@ -134,8 +119,3 @@ class Jjjjjk12RecommendationWorkflow:
             scored_candidate.final_score,
             reason,
         )
-
-    def _score_key(self, scored_candidate: ScoredCandidate) -> float:
-        """정렬에 사용할 최종 점수를 반환한다."""
-
-        return scored_candidate.final_score
