@@ -124,6 +124,7 @@ def fetch_lecture_detail(
     source_id = _extract_detail_source_id(soup) or extract_source_id(detail_url)
     title = _extract_detail_title(soup)
     description = _extract_detail_description(soup)
+    _validate_lecture_detail_fields(source_id, title, description)
     return LectureDetail(
         source_id=source_id,
         title=title,
@@ -131,6 +132,15 @@ def fetch_lecture_detail(
         detail_url=detail_url,
         content_hash=make_content_hash(title, description),
     )
+
+
+def _validate_lecture_detail_fields(source_id: str, title: str, description: str) -> None:
+    """DB 저장과 임베딩 전에 상세 페이지 필수 필드가 비어 있지 않은지 확인한다."""
+
+    if not title:
+        raise RuntimeError(f"SOMA lecture detail title was empty: source_id={source_id}")
+    if not description:
+        raise RuntimeError(f"SOMA lecture detail description was empty: source_id={source_id}")
 
 
 def fetch_lecture_data(

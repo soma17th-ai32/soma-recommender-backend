@@ -4,6 +4,7 @@ from apps.api.lecture_sync import (
     _clean_text,
     _extract_login_payload,
     _format_pgvector,
+    _validate_lecture_detail_fields,
     _with_page_index,
     extract_source_id,
     make_content_hash,
@@ -103,3 +104,23 @@ def test_extract_login_payload_keeps_only_hidden_inputs() -> None:
     )
 
     assert _extract_login_payload(soup.select_one("form")) == {"csrf": "token"}
+
+
+def test_validate_lecture_detail_fields_rejects_empty_title() -> None:
+    try:
+        _validate_lecture_detail_fields("10268", "", "description")
+    except RuntimeError as error:
+        assert "title was empty" in str(error)
+        assert "10268" in str(error)
+    else:
+        raise AssertionError("Expected RuntimeError")
+
+
+def test_validate_lecture_detail_fields_rejects_empty_description() -> None:
+    try:
+        _validate_lecture_detail_fields("10268", "title", "")
+    except RuntimeError as error:
+        assert "description was empty" in str(error)
+        assert "10268" in str(error)
+    else:
+        raise AssertionError("Expected RuntimeError")
