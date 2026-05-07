@@ -15,6 +15,10 @@ class ProfileExtractionError(Jjjjjk12AgentError):
     """관심사 프로필 추출에 실패했을 때 발생한다."""
 
 
+class ReasonGenerationError(Jjjjjk12AgentError):
+    """추천 사유 생성에 실패했을 때 발생한다."""
+
+
 class EmbeddingProviderError(Jjjjjk12AgentError):
     """임베딩 생성에 실패했을 때 발생한다."""
 

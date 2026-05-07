@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 from soma_agent.common.schemas import History
+from soma_agent.jjjjjk12.schemas import InterestProfile
+from soma_agent.jjjjjk12.schemas import ScoredCandidate
 
 
 PROFILE_SYSTEM_PROMPT = """
 너는 수강 이력을 바탕으로 사용자의 관심사를 추출하는 추천 시스템 구성요소다.
 반드시 JSON만 응답한다.
 멘토 이름은 관심사, 키워드, 추천 근거로 사용하지 않는다.
+""".strip()
+
+REASON_SYSTEM_PROMPT = """
+너는 추천 후보가 사용자 관심사와 맞는 이유를 설명하는 추천 시스템 구성요소다.
+반드시 JSON만 응답한다.
+멘토 이름은 추천 근거로 사용하지 않는다.
+과장하지 말고 한 문장으로 짧게 설명한다.
 """.strip()
 
 
@@ -71,3 +80,30 @@ def truncate_text(value: str | None, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rstrip()
+
+
+def build_reason_user_prompt(
+    scored_candidate: ScoredCandidate,
+    profile: InterestProfile,
+) -> str:
+    """추천 사유 생성용 사용자 프롬프트를 만든다."""
+
+    candidate = scored_candidate.candidate
+    return f"""
+사용자 관심사: {profile.summary}
+관심 키워드: {build_keyword_text(profile.keywords)}
+추천 후보 제목: {candidate.title}
+추천 후보 요약: {candidate.summary}
+추천 점수: {scored_candidate.final_score:.3f}
+
+응답 형식:
+{{"reason": "추천 사유 한 문장"}}
+""".strip()
+
+
+def build_keyword_text(keywords: list[str]) -> str:
+    """키워드 목록을 프롬프트용 문자열로 만든다."""
+
+    if not keywords:
+        return "없음"
+    return ", ".join(keywords[:5])
