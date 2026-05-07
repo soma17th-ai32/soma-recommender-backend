@@ -8,6 +8,7 @@ from soma_agent.common.schemas import RecommendationRequest
 from soma_agent.common.schemas import RecommendationResult
 from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
 from soma_agent.jjjjjk12.history_preprocessor import prepare_histories
+from soma_agent.jjjjjk12.rules import filter_recommendable_candidates
 from soma_agent.jjjjjk12.schemas import InterestProfile
 from soma_agent.jjjjjk12.schemas import LectureCandidate
 from soma_agent.jjjjjk12.schemas import ScoredCandidate
@@ -77,13 +78,7 @@ class Jjjjjk12RecommendationWorkflow:
     ) -> list[LectureCandidate]:
         """마감 후보와 이미 수강한 후보를 제외한다."""
 
-        taken_urls = {history.url for history in histories}
-        result = []
-        for candidate in candidates:
-            if candidate.is_closed or candidate.url in taken_urls:
-                continue
-            result.append(candidate)
-        return result
+        return filter_recommendable_candidates(candidates, histories)
 
     def _rank_candidates(
         self,
