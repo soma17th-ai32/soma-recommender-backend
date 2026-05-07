@@ -8,6 +8,7 @@ import time
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
 from openai import OpenAI
+import psycopg
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -35,6 +36,21 @@ class LectureDetail:
     title: str
     description: str
     detail_url: str
+    content_hash: str
+
+
+@dataclass(frozen=True)
+class LectureData:
+    """목록 메타데이터와 상세 본문을 합친 DB 저장 단위."""
+
+    source_id: str
+    title: str
+    description: str
+    detail_url: str
+    receipt_period: str | None
+    event_date: str | None
+    author: str | None
+    registered_at: str | None
     content_hash: str
 
 
@@ -234,6 +250,17 @@ def load_upstage_settings() -> UpstageSettings:
     )
 
 
+def load_database_url() -> str:
+    """프로젝트 루트 .env와 환경변수에서 PostgreSQL 연결 문자열을 읽는다."""
+
+    load_dotenv()
+
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("Missing required environment variable: DATABASE_URL")
+    return database_url
+
+
 def create_upstage_client(settings: UpstageSettings | None = None) -> OpenAI:
     """OpenAI 호환 클라이언트로 Upstage API client를 생성한다."""
 
@@ -405,17 +432,20 @@ def refresh_lecture_status(
             activated_count += 1
 
         if existing is None:
-            detail = fetch_lecture_detail(session, lecture.detail_url, settings)
-            insert_lecture(detail)
-            embedding_pending_count += queue_embedding_update(detail)
+            lecture_data = fetch_lecture_data(session, lecture, settings)
+            insert_lecture(lecture_data)
+            embedding_pending_count += queue_embedding_update(lecture_data)
             inserted_count += 1
             continue
 
-        detail = fetch_lecture_detail(session, lecture.detail_url, settings)
-        if needs_embedding_update(existing.content_hash, detail.content_hash):
-            update_lecture(detail)
-            embedding_pending_count += queue_embedding_update(detail)
+        lecture_data = fetch_lecture_data(session, lecture, settings)
+        if needs_embedding_update(existing.content_hash, lecture_data.content_hash):
+            update_lecture(lecture_data)
+            embedding_pending_count += queue_embedding_update(lecture_data)
             updated_count += 1
+            continue
+
+        update_lecture_seen(lecture_data)
 
     return SyncLectureResult(
         fetched_count=len(available_lectures),
@@ -424,6 +454,27 @@ def refresh_lecture_status(
         activated_count=activated_count,
         inactivated_count=inactivated_count,
         embedding_pending_count=embedding_pending_count,
+    )
+
+
+def fetch_lecture_data(
+    session: requests.Session,
+    lecture: LectureListItem,
+    settings: SomaSettings,
+) -> LectureData:
+    """목록 row와 상세 페이지 본문을 합쳐 DB 저장용 데이터를 만든다."""
+
+    detail = fetch_lecture_detail(session, lecture.detail_url, settings)
+    return LectureData(
+        source_id=detail.source_id,
+        title=detail.title,
+        description=detail.description,
+        detail_url=detail.detail_url,
+        receipt_period=lecture.receipt_period,
+        event_date=lecture.event_date,
+        author=lecture.author,
+        registered_at=lecture.registered_at,
+        content_hash=detail.content_hash,
     )
 
 
@@ -491,24 +542,126 @@ def needs_embedding_update(existing_hash: str | None, new_hash: str) -> bool:
 
 
 def get_existing_lectures() -> list[LectureRecord]:
-    """DB에서 기존 특강 목록을 조회한다. 실제 DB 연결 시 구현한다."""
+    """DB에서 기존 특강 목록을 조회한다."""
 
-    # TODO: PostgreSQL에서 lectures row를 조회하도록 구현한다.
-    raise NotImplementedError("DB connection is not configured yet.")
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT source_id, title, description, status, content_hash
+                FROM lectures
+                """
+            )
+            return [
+                LectureRecord(
+                    source_id=row[0],
+                    title=row[1],
+                    description=row[2],
+                    status=row[3],
+                    content_hash=row[4],
+                )
+                for row in cur.fetchall()
+            ]
 
 
-def insert_lecture(detail: LectureDetail) -> None:
-    """신규 특강을 DB에 저장한다. 실제 DB 연결 시 구현한다."""
+def insert_lecture(lecture: LectureData) -> None:
+    """신규 특강을 active 상태로 DB에 저장한다."""
 
-    # TODO: 신규 특강 row를 lectures 테이블에 insert하도록 구현한다.
-    raise NotImplementedError("DB connection is not configured yet.")
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO lectures (
+                    source_id,
+                    title,
+                    description,
+                    detail_url,
+                    status,
+                    receipt_period,
+                    event_date,
+                    author,
+                    registered_at,
+                    content_hash,
+                    last_seen_at,
+                    updated_at
+                )
+                VALUES (
+                    %(source_id)s,
+                    %(title)s,
+                    %(description)s,
+                    %(detail_url)s,
+                    'active',
+                    %(receipt_period)s,
+                    %(event_date)s,
+                    %(author)s,
+                    %(registered_at)s,
+                    %(content_hash)s,
+                    now(),
+                    now()
+                )
+                ON CONFLICT (source_id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    description = EXCLUDED.description,
+                    detail_url = EXCLUDED.detail_url,
+                    status = 'active',
+                    receipt_period = EXCLUDED.receipt_period,
+                    event_date = EXCLUDED.event_date,
+                    author = EXCLUDED.author,
+                    registered_at = EXCLUDED.registered_at,
+                    content_hash = EXCLUDED.content_hash,
+                    last_seen_at = now(),
+                    updated_at = now()
+                """,
+                _lecture_params(lecture),
+            )
 
 
-def update_lecture(detail: LectureDetail) -> None:
-    """내용이 변경된 기존 특강 row를 갱신한다. 실제 DB 연결 시 구현한다."""
+def update_lecture(lecture: LectureData) -> None:
+    """내용이 변경된 기존 특강 row를 갱신하고 임베딩을 비운다."""
 
-    # TODO: title/description/detail_url/content_hash/updated_at을 update하도록 구현한다.
-    raise NotImplementedError("DB connection is not configured yet.")
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE lectures
+                SET title = %(title)s,
+                    description = %(description)s,
+                    detail_url = %(detail_url)s,
+                    status = 'active',
+                    receipt_period = %(receipt_period)s,
+                    event_date = %(event_date)s,
+                    author = %(author)s,
+                    registered_at = %(registered_at)s,
+                    content_hash = %(content_hash)s,
+                    embedding = NULL,
+                    embedding_updated_at = NULL,
+                    last_seen_at = now(),
+                    updated_at = now()
+                WHERE source_id = %(source_id)s
+                """,
+                _lecture_params(lecture),
+            )
+
+
+def update_lecture_seen(lecture: LectureData) -> None:
+    """본문이 그대로인 특강의 목록 메타데이터와 마지막 발견 시각만 갱신한다."""
+
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE lectures
+                SET status = 'active',
+                    receipt_period = %(receipt_period)s,
+                    event_date = %(event_date)s,
+                    author = %(author)s,
+                    registered_at = %(registered_at)s,
+                    last_seen_at = now(),
+                    updated_at = now()
+                WHERE source_id = %(source_id)s
+                """,
+                _lecture_params(lecture),
+            )
 
 
 def mark_lectures_inactive(source_ids: set[str]) -> int:
@@ -516,22 +669,78 @@ def mark_lectures_inactive(source_ids: set[str]) -> int:
 
     if not source_ids:
         return 0
-    # TODO: source_id 목록에 해당하는 row의 status를 inactive로 update하도록 구현한다.
-    raise NotImplementedError("DB connection is not configured yet.")
+
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE lectures
+                SET status = 'inactive',
+                    updated_at = now()
+                WHERE source_id = ANY(%s)
+                  AND status <> 'inactive'
+                """,
+                (list(source_ids),),
+            )
+            return cur.rowcount
 
 
 def mark_lecture_active(source_id: str) -> None:
     """이전에 비활성화된 특강이 다시 보이면 접수 가능 상태로 복구한다."""
 
-    # TODO: source_id에 해당하는 row의 status를 active로 update하도록 구현한다.
-    raise NotImplementedError("DB connection is not configured yet.")
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE lectures
+                SET status = 'active',
+                    last_seen_at = now(),
+                    updated_at = now()
+                WHERE source_id = %s
+                """,
+                (source_id,),
+            )
 
 
-def queue_embedding_update(detail: LectureDetail) -> int:
-    """임베딩 생성과 pgvector upsert를 예약/수행한다. 실제 연동 시 구현한다."""
+def queue_embedding_update(lecture: LectureData) -> int:
+    """Upstage 임베딩을 생성해 pgvector 컬럼에 저장한다."""
 
-    # TODO: Upstage embedding 생성 후 lectures.embedding과 embedding_updated_at을 갱신한다.
-    raise NotImplementedError("Embedding and pgvector upsert are not configured yet.")
+    embedding = embed_text(build_embedding_text(lecture.title, lecture.description))
+    with psycopg.connect(load_database_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE lectures
+                SET embedding = %s::vector,
+                    embedding_updated_at = now(),
+                    updated_at = now()
+                WHERE source_id = %s
+                """,
+                (_format_pgvector(embedding), lecture.source_id),
+            )
+            return cur.rowcount
+
+
+def _lecture_params(lecture: LectureData) -> dict[str, str | None]:
+    """LectureData를 SQL named parameter로 전달하기 위한 dict로 변환한다."""
+
+    return {
+        "source_id": lecture.source_id,
+        "title": lecture.title,
+        "description": lecture.description,
+        "detail_url": lecture.detail_url,
+        "receipt_period": lecture.receipt_period,
+        "event_date": lecture.event_date,
+        "author": lecture.author,
+        "registered_at": lecture.registered_at,
+        "content_hash": lecture.content_hash,
+    }
+
+
+def _format_pgvector(embedding: list[float]) -> str:
+    """pgvector가 받을 수 있는 '[0.1,0.2,...]' 문자열로 변환한다."""
+
+    return "[" + ",".join(str(value) for value in embedding) + "]"
 
 
 def extract_source_id(detail_url: str) -> str:
@@ -710,7 +919,19 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="SOMA lecture crawler utilities")
     parser.add_argument("--embed", action="store_true", help="also create an Upstage embedding for the first lecture")
+    parser.add_argument("--sync", action="store_true", help="sync available lectures into PostgreSQL")
     args = parser.parse_args()
+
+    if args.sync:
+        result = sync_lecture()
+        print("\n=== SOMA lecture sync result ===")
+        print(f"fetched_count={result.fetched_count}")
+        print(f"inserted_count={result.inserted_count}")
+        print(f"updated_count={result.updated_count}")
+        print(f"activated_count={result.activated_count}")
+        print(f"inactivated_count={result.inactivated_count}")
+        print(f"embedding_pending_count={result.embedding_pending_count}")
+        return
 
     if args.embed:
         print_live_embedding_preview()
