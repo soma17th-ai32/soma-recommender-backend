@@ -594,12 +594,14 @@ source = { virtual = "packages/agent" }
 dependencies = [
     { name = "openai" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "openai", specifier = ">=1.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
 [[package]]
