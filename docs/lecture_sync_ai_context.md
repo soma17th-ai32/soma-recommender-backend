@@ -4,20 +4,28 @@
 
 ## 작업 범위
 
-현재 구현은 `apps/api` 안에 있습니다.
+현재 구현은 `apps/api/lecture_sync` 패키지에 있습니다.
 
 주요 파일:
 
-- `apps/api/lecture_sync.py`: 소마 특강 목록/상세 수집, 상태 동기화, Upstage embedding 생성, PostgreSQL/pgvector 저장
+- `apps/api/lecture_sync/service.py`: sync orchestration과 상태 갱신 흐름
+- `apps/api/lecture_sync/crawler.py`: 소마 로그인, 세션 확인, 목록/상세 수집
+- `apps/api/lecture_sync/parser.py`: 목록 HTML 파싱, URL/query helper, content hash
+- `apps/api/lecture_sync/repository.py`: PostgreSQL/pgvector 저장
+- `apps/api/lecture_sync/embedding.py`: Upstage embedding 호출
+- `apps/api/lecture_sync/models.py`: dataclass 모델
+- `apps/api/lecture_sync/settings.py`: `.env` 기반 설정 로드
+- `apps/api/lecture_sync/cli.py`: 로컬 CLI 출력
 - `apps/api/sql/001_create_lectures.sql`: `lectures` 테이블과 pgvector extension 생성 SQL
 - `apps/api/pyproject.toml`: API 패키지 의존성
+- `apps/api/tests/unit/test_lecture_sync.py`: 순수 helper와 fast-path 단위 테스트
 - `docs/lecture_sync_db_test.md`: 로컬 DB 테스트 절차
 
 이 구현은 추천 로직을 담당하지 않습니다. 추천 API나 agent 패키지의 추천 알고리즘은 다른 담당 영역입니다.
 
 ## 현재 책임
 
-`lecture_sync.py`의 책임:
+`lecture_sync` 패키지의 책임:
 
 - 소마 사이트 로그인
 - 로그인 세션 유지 확인
@@ -85,6 +93,7 @@ DB sync 실행:
 
 - 상세 페이지에서 읽은 embedding 대상 정보
 - `source_id`, `title`, `description`, `detail_url`, `content_hash`
+- `title` 또는 `description`이 비어 있으면 저장/임베딩 전에 `RuntimeError`
 
 `LectureData`
 
@@ -94,7 +103,7 @@ DB sync 실행:
 `LectureRecord`
 
 - DB에 이미 존재하는 row의 비교용 정보
-- `source_id`, `title`, `description`, `status`, `content_hash`
+- `source_id`, `title`, `description`, `status`, `content_hash`, `last_seen_at`
 
 `SyncLectureResult`
 
@@ -118,8 +127,9 @@ DB sync 실행:
 3. 신규 row는 `fetch_lecture_data()` 후 `insert_lecture()`
 4. 신규 row는 `update_lecture_embedding()`으로 embedding 생성/저장
 5. 기존 row가 `inactive`였다가 다시 보이면 `mark_lecture_active()`
-6. 기존 row의 `content_hash`가 바뀌면 `update_lecture()` 후 embedding 재생성
-7. 기존 row의 본문이 그대로면 `update_lecture_seen()`으로 목록 메타데이터와 `last_seen_at`만 갱신
+6. `SWM_DETAIL_REFRESH_INTERVAL_SECONDS` 안에 이미 확인한 기존 row는 상세 재조회를 생략하고 목록 메타데이터만 갱신
+7. 기존 row의 `content_hash`가 바뀌면 `update_lecture()` 후 embedding 재생성
+8. 기존 row의 본문이 그대로면 `update_lecture_seen()`으로 목록 메타데이터와 `last_seen_at`만 갱신
 
 ## DB Schema
 
@@ -148,11 +158,19 @@ DB sync 실행:
 - 크롤링 HTML selector는 소마 페이지 구조에 의존합니다.
 - 소마 로그인은 `form#login_form`과 `/sw/member/user/checkStat.json` 호출에 의존합니다.
 - 상세 설명은 `.bbs-view-new > .cont`, `.bbs-view-new .cont`에서 추출합니다.
+- 상세 제목 또는 설명이 비면 DB 저장과 embedding 생성을 중단합니다.
 - embedding은 제목과 설명만 사용합니다. 작성자, 일시, 접수 기간은 embedding 대상이 아닙니다.
 - `content_hash`가 바뀐 경우 기존 embedding을 `NULL`로 비운 뒤 재생성합니다.
 - `sync_lecture()`는 한 번 연 DB connection을 repository 함수들에 전달합니다.
 - `SWM_DETAIL_REFRESH_INTERVAL_SECONDS`를 설정하면 최근에 확인한 기존 row는 상세 페이지 재조회와 embedding 재확인을 생략합니다.
 - 현재 로거는 의도적으로 넣지 않았습니다.
+
+## 검증 상태
+
+- `uv run pytest`: 13 passed
+- `.venv/bin/python -m apps.api.lecture_sync --help`: OK
+- `.venv/bin/python -m apps.api.lecture_sync --sync`: 리팩터링 후 실행 성공
+- pgvector 확인: `vector_dims(embedding) = 4096`
 
 ## 다음 작업 후보
 

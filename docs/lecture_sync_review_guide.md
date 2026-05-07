@@ -19,6 +19,9 @@
 - 내용이 바뀐 특강 embedding 재생성
 - 로컬 DB 테스트 문서 작성
 - 선택적 상세 페이지 재조회 생략 옵션
+- 공용 pytest 설정과 단위 테스트 추가
+- `lecture_sync` 단일 파일을 역할별 패키지로 분리
+- sync 1회당 DB connection 1개 재사용
 
 구현하지 않은 것:
 
@@ -33,7 +36,14 @@
 
 주요 구현:
 
-- `apps/api/lecture_sync.py`
+- `apps/api/lecture_sync/service.py`
+- `apps/api/lecture_sync/crawler.py`
+- `apps/api/lecture_sync/parser.py`
+- `apps/api/lecture_sync/repository.py`
+- `apps/api/lecture_sync/embedding.py`
+- `apps/api/lecture_sync/models.py`
+- `apps/api/lecture_sync/settings.py`
+- `apps/api/lecture_sync/cli.py`
 
 DB 스키마:
 
@@ -41,8 +51,13 @@ DB 스키마:
 
 의존성:
 
+- `pyproject.toml`
 - `apps/api/pyproject.toml`
 - `uv.lock`
+
+테스트:
+
+- `apps/api/tests/unit/test_lecture_sync.py`
 
 테스트 절차 문서:
 
@@ -135,7 +150,7 @@ AI 참고 문서:
 
 로컬 PostgreSQL + pgvector 컨테이너로 실제 sync를 실행했습니다.
 
-실행 결과:
+초기 insert 검증 결과:
 
 ```text
 fetched_count=10
@@ -144,6 +159,17 @@ updated_count=0
 activated_count=0
 inactivated_count=0
 embedding_pending_count=10
+```
+
+리팩터링 후 재실행 결과:
+
+```text
+fetched_count=10
+inserted_count=0
+updated_count=0
+activated_count=0
+inactivated_count=0
+embedding_pending_count=0
 ```
 
 pgvector 저장 확인:
@@ -160,14 +186,28 @@ vector_dims = 4096
 
 즉, 수집, DB insert, Upstage embedding 생성, pgvector 저장까지 정상 동작을 확인했습니다.
 
+단위 테스트:
+
+```text
+uv run pytest
+13 passed
+```
+
 ## 리뷰할 때 보면 좋은 지점
 
-`apps/api/lecture_sync.py`
+`apps/api/lecture_sync/service.py`
 
 - `sync_lecture()`: 전체 orchestration
 - `refresh_lecture_status()`: 신규/변경/비활성/재활성 판단
+- `should_skip_detail_refresh()`: 선택적 상세 재조회 생략 판단
+
+`apps/api/lecture_sync/crawler.py`
+
 - `fetch_available_lecture_list()`: 목록 페이지 순회
 - `fetch_lecture_detail()`: 상세 페이지 추출
+
+`apps/api/lecture_sync/repository.py`
+
 - `insert_lecture()`, `update_lecture()`, `update_lecture_seen()`: DB 저장
 - `mark_lectures_inactive()`, `mark_lecture_active()`: 상태 갱신
 - `update_lecture_embedding()`: embedding 생성과 pgvector 저장

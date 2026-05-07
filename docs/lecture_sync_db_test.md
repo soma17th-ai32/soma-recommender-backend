@@ -44,6 +44,12 @@ DATABASE_URL=postgresql://soma:soma@localhost:5432/soma_recommender
 SWM_MAX_PAGES=1
 ```
 
+기존 row의 상세 페이지 재조회 비용을 줄이고 싶으면 선택적으로 interval을 설정합니다. 기본값은 없으며, 설정하지 않으면 매 sync마다 기존 row도 상세 페이지를 다시 확인합니다.
+
+```env
+SWM_DETAIL_REFRESH_INTERVAL_SECONDS=86400
+```
+
 ## 4. DB 스키마 적용
 
 로컬에 `psql`이 없어도 Docker 컨테이너 안의 `psql`로 실행할 수 있습니다.
@@ -84,7 +90,19 @@ uv sync --package soma-api
 
 이 명령은 소마 로그인, 접수 가능 특강 목록 수집, 상세 페이지 수집, DB insert/update, inactive 처리, Upstage embedding 생성, pgvector 저장을 수행합니다.
 
-## 7. 저장 결과 확인
+## 7. 단위 테스트 실행
+
+```bash
+uv run pytest
+```
+
+현재 기대 결과:
+
+```text
+13 passed
+```
+
+## 8. 저장 결과 확인
 
 ```bash
 docker exec -it soma-postgres psql -U soma -d soma_recommender
@@ -108,7 +126,7 @@ SELECT source_id, vector_dims(embedding) FROM lectures WHERE embedding IS NOT NU
 \q
 ```
 
-## 8. 자주 나는 문제
+## 9. 자주 나는 문제
 
 Docker daemon이 꺼져 있는 경우:
 
