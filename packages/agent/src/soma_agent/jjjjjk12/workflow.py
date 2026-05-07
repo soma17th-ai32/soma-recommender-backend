@@ -7,6 +7,7 @@ from soma_agent.common.schemas import RecommendationItem
 from soma_agent.common.schemas import RecommendationRequest
 from soma_agent.common.schemas import RecommendationResult
 from soma_agent.jjjjjk12.history_preprocessor import prepare_histories
+from soma_agent.jjjjjk12.query_builder import build_query_text
 from soma_agent.jjjjjk12.ranker import rank_candidates
 from soma_agent.jjjjjk12.rules import filter_recommendable_candidates
 from soma_agent.jjjjjk12.schemas import InterestProfile
@@ -49,16 +50,8 @@ class Jjjjjk12RecommendationWorkflow:
     def _create_query_embedding(self, profile: InterestProfile) -> list[float]:
         """관심사 프로필을 검색용 임베딩으로 변환한다."""
 
-        query_text = self._build_query_text(profile)
+        query_text = build_query_text(profile)
         return self.embedding_client.embed(query_text)
-
-    def _build_query_text(self, profile: InterestProfile) -> str:
-        """관심사 프로필을 검색용 문장으로 만든다."""
-
-        lines = [f"관심 요약: {profile.summary}"]
-        if profile.keywords:
-            lines.append(f"핵심 키워드: {', '.join(profile.keywords)}")
-        return "\n".join(lines)
 
     def _search_candidates(
         self,
