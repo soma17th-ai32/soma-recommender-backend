@@ -16,23 +16,26 @@ class LectureListItem:
 
 
 @dataclass(frozen=True)
-class LectureDetail:
-    """상세 페이지에서 수집한 임베딩/저장 대상 특강 정보."""
+class LectureBase:
+    """특강 상세 본문을 가진 데이터 모델의 공통 필드."""
 
     source_id: str
     title: str
     description: str
+
+
+@dataclass(frozen=True)
+class LectureDetail(LectureBase):
+    """상세 페이지에서 수집한 임베딩/저장 대상 특강 정보."""
+
     detail_url: str
     content_hash: str
 
 
 @dataclass(frozen=True)
-class LectureData:
+class LectureData(LectureBase):
     """목록 메타데이터와 상세 본문을 합친 DB 저장 단위."""
 
-    source_id: str
-    title: str
-    description: str
     detail_url: str
     receipt_period: str | None
     event_date: str | None
@@ -42,12 +45,9 @@ class LectureData:
 
 
 @dataclass(frozen=True)
-class LectureRecord:
+class LectureRecord(LectureBase):
     """DB에 이미 저장되어 있다고 가정하는 기존 특강 row 정보."""
 
-    source_id: str
-    title: str
-    description: str
     status: str
     content_hash: str
 

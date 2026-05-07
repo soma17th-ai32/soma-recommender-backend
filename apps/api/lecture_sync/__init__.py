@@ -22,6 +22,7 @@ from apps.api.lecture_sync.embedding import (
     embed_text,
 )
 from apps.api.lecture_sync.models import (
+    LectureBase,
     LectureData,
     LectureDetail,
     LectureListItem,
@@ -59,6 +60,7 @@ from apps.api.lecture_sync.settings import (
 
 __all__ = [
     "LectureData",
+    "LectureBase",
     "LectureDetail",
     "LectureListItem",
     "LectureRecord",
