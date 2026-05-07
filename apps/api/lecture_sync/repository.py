@@ -1,189 +1,179 @@
-import psycopg
-
 from apps.api.lecture_sync.embedding import embed_text
 from apps.api.lecture_sync.models import LectureData, LectureRecord
 from apps.api.lecture_sync.parser import build_embedding_text
-from apps.api.lecture_sync.settings import load_database_url
 
 
-def get_existing_lectures() -> list[LectureRecord]:
+def get_existing_lectures(conn) -> list[LectureRecord]:
     """DB에서 기존 특강 목록을 조회한다."""
 
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT source_id, title, description, status, content_hash
-                FROM lectures
-                """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT source_id, title, description, status, content_hash
+            FROM lectures
+            """
+        )
+        return [
+            LectureRecord(
+                source_id=row[0],
+                title=row[1],
+                description=row[2],
+                status=row[3],
+                content_hash=row[4],
             )
-            return [
-                LectureRecord(
-                    source_id=row[0],
-                    title=row[1],
-                    description=row[2],
-                    status=row[3],
-                    content_hash=row[4],
-                )
-                for row in cur.fetchall()
-            ]
+            for row in cur.fetchall()
+        ]
 
 
-def insert_lecture(lecture: LectureData) -> None:
+def insert_lecture(conn, lecture: LectureData) -> None:
     """신규 특강을 active 상태로 DB에 저장한다."""
 
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO lectures (
-                    source_id,
-                    title,
-                    description,
-                    detail_url,
-                    status,
-                    receipt_period,
-                    event_date,
-                    author,
-                    registered_at,
-                    content_hash,
-                    last_seen_at,
-                    updated_at
-                )
-                VALUES (
-                    %(source_id)s,
-                    %(title)s,
-                    %(description)s,
-                    %(detail_url)s,
-                    'active',
-                    %(receipt_period)s,
-                    %(event_date)s,
-                    %(author)s,
-                    %(registered_at)s,
-                    %(content_hash)s,
-                    now(),
-                    now()
-                )
-                ON CONFLICT (source_id) DO UPDATE SET
-                    title = EXCLUDED.title,
-                    description = EXCLUDED.description,
-                    detail_url = EXCLUDED.detail_url,
-                    status = 'active',
-                    receipt_period = EXCLUDED.receipt_period,
-                    event_date = EXCLUDED.event_date,
-                    author = EXCLUDED.author,
-                    registered_at = EXCLUDED.registered_at,
-                    content_hash = EXCLUDED.content_hash,
-                    last_seen_at = now(),
-                    updated_at = now()
-                """,
-                _lecture_params(lecture),
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO lectures (
+                source_id,
+                title,
+                description,
+                detail_url,
+                status,
+                receipt_period,
+                event_date,
+                author,
+                registered_at,
+                content_hash,
+                last_seen_at,
+                updated_at
             )
+            VALUES (
+                %(source_id)s,
+                %(title)s,
+                %(description)s,
+                %(detail_url)s,
+                'active',
+                %(receipt_period)s,
+                %(event_date)s,
+                %(author)s,
+                %(registered_at)s,
+                %(content_hash)s,
+                now(),
+                now()
+            )
+            ON CONFLICT (source_id) DO UPDATE SET
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
+                detail_url = EXCLUDED.detail_url,
+                status = 'active',
+                receipt_period = EXCLUDED.receipt_period,
+                event_date = EXCLUDED.event_date,
+                author = EXCLUDED.author,
+                registered_at = EXCLUDED.registered_at,
+                content_hash = EXCLUDED.content_hash,
+                last_seen_at = now(),
+                updated_at = now()
+            """,
+            _lecture_params(lecture),
+        )
 
 
-def update_lecture(lecture: LectureData) -> None:
+def update_lecture(conn, lecture: LectureData) -> None:
     """내용이 변경된 기존 특강 row를 갱신하고 임베딩을 비운다."""
 
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE lectures
-                SET title = %(title)s,
-                    description = %(description)s,
-                    detail_url = %(detail_url)s,
-                    status = 'active',
-                    receipt_period = %(receipt_period)s,
-                    event_date = %(event_date)s,
-                    author = %(author)s,
-                    registered_at = %(registered_at)s,
-                    content_hash = %(content_hash)s,
-                    embedding = NULL,
-                    embedding_updated_at = NULL,
-                    last_seen_at = now(),
-                    updated_at = now()
-                WHERE source_id = %(source_id)s
-                """,
-                _lecture_params(lecture),
-            )
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE lectures
+            SET title = %(title)s,
+                description = %(description)s,
+                detail_url = %(detail_url)s,
+                status = 'active',
+                receipt_period = %(receipt_period)s,
+                event_date = %(event_date)s,
+                author = %(author)s,
+                registered_at = %(registered_at)s,
+                content_hash = %(content_hash)s,
+                embedding = NULL,
+                embedding_updated_at = NULL,
+                last_seen_at = now(),
+                updated_at = now()
+            WHERE source_id = %(source_id)s
+            """,
+            _lecture_params(lecture),
+        )
 
 
-def update_lecture_seen(lecture: LectureData) -> None:
+def update_lecture_seen(conn, lecture: LectureData) -> None:
     """본문이 그대로인 특강의 목록 메타데이터와 마지막 발견 시각만 갱신한다."""
 
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE lectures
-                SET status = 'active',
-                    receipt_period = %(receipt_period)s,
-                    event_date = %(event_date)s,
-                    author = %(author)s,
-                    registered_at = %(registered_at)s,
-                    last_seen_at = now(),
-                    updated_at = now()
-                WHERE source_id = %(source_id)s
-                """,
-                _lecture_params(lecture),
-            )
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE lectures
+            SET status = 'active',
+                receipt_period = %(receipt_period)s,
+                event_date = %(event_date)s,
+                author = %(author)s,
+                registered_at = %(registered_at)s,
+                last_seen_at = now(),
+                updated_at = now()
+            WHERE source_id = %(source_id)s
+            """,
+            _lecture_params(lecture),
+        )
 
 
-def mark_lectures_inactive(source_ids: set[str]) -> int:
+def mark_lectures_inactive(conn, source_ids: set[str]) -> int:
     """이번 목록에 없는 기존 특강을 접수 불가능 상태로 변경한다."""
 
     if not source_ids:
         return 0
 
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE lectures
-                SET status = 'inactive',
-                    updated_at = now()
-                WHERE source_id = ANY(%s)
-                  AND status <> 'inactive'
-                """,
-                (list(source_ids),),
-            )
-            return cur.rowcount
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE lectures
+            SET status = 'inactive',
+                updated_at = now()
+            WHERE source_id = ANY(%s)
+              AND status <> 'inactive'
+            """,
+            (list(source_ids),),
+        )
+        return cur.rowcount
 
 
-def mark_lecture_active(source_id: str) -> None:
+def mark_lecture_active(conn, source_id: str) -> None:
     """이전에 비활성화된 특강이 다시 보이면 접수 가능 상태로 복구한다."""
 
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE lectures
-                SET status = 'active',
-                    last_seen_at = now(),
-                    updated_at = now()
-                WHERE source_id = %s
-                """,
-                (source_id,),
-            )
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE lectures
+            SET status = 'active',
+                last_seen_at = now(),
+                updated_at = now()
+            WHERE source_id = %s
+            """,
+            (source_id,),
+        )
 
 
-def queue_embedding_update(lecture: LectureData) -> int:
+def queue_embedding_update(conn, lecture: LectureData) -> int:
     """Upstage 임베딩을 생성해 pgvector 컬럼에 저장한다."""
 
     embedding = embed_text(build_embedding_text(lecture.title, lecture.description))
-    with psycopg.connect(load_database_url()) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE lectures
-                SET embedding = %s::vector,
-                    embedding_updated_at = now(),
-                    updated_at = now()
-                WHERE source_id = %s
-                """,
-                (_format_pgvector(embedding), lecture.source_id),
-            )
-            return cur.rowcount
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE lectures
+            SET embedding = %s::vector,
+                embedding_updated_at = now(),
+                updated_at = now()
+            WHERE source_id = %s
+            """,
+            (_format_pgvector(embedding), lecture.source_id),
+        )
+        return cur.rowcount
 
 
 def _lecture_params(lecture: LectureData) -> dict[str, str | None]:

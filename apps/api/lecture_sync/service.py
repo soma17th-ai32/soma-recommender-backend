@@ -1,3 +1,5 @@
+import psycopg
+
 from apps.api.lecture_sync.crawler import (
     create_soma_session,
     fetch_available_lecture_list,
@@ -17,6 +19,7 @@ from apps.api.lecture_sync.repository import (
     update_lecture_seen,
 )
 from apps.api.lecture_sync.settings import load_soma_settings
+from apps.api.lecture_sync.settings import load_database_url
 
 
 def sync_lecture() -> SyncLectureResult:
@@ -34,18 +37,20 @@ def sync_lecture() -> SyncLectureResult:
         # 4. 접수 가능 상태의 특강 목록을 모든 페이지에서 수집한다.
         available_lectures = fetch_available_lecture_list(session, settings)
 
-        # 5. 수집 결과를 기준으로 신규/수정/비활성화/재활성화 대상을 처리한다.
-        return refresh_lecture_status(available_lectures, session, settings)
+        # 5. 수집 결과를 기준으로 신규/수정/비활성화/재활성화 대상을 한 DB connection에서 처리한다.
+        with psycopg.connect(load_database_url()) as conn:
+            return refresh_lecture_status(available_lectures, session, settings, conn)
 
 
 def refresh_lecture_status(
     available_lectures: list[LectureListItem],
     session,
     settings: SomaSettings,
+    conn,
 ) -> SyncLectureResult:
     """수집된 접수 가능 목록을 기준으로 DB 상태와 임베딩 갱신 대상을 계산한다."""
 
-    existing_records = get_existing_lectures()
+    existing_records = get_existing_lectures(conn)
     existing_by_id = {lecture.source_id: lecture for lecture in existing_records}
     available_ids = {lecture.source_id for lecture in available_lectures}
     existing_ids = set(existing_by_id)
@@ -56,29 +61,29 @@ def refresh_lecture_status(
     embedding_pending_count = 0
 
     missing_ids = existing_ids - available_ids
-    inactivated_count = mark_lectures_inactive(missing_ids)
+    inactivated_count = mark_lectures_inactive(conn, missing_ids)
 
     for lecture in available_lectures:
         existing = existing_by_id.get(lecture.source_id)
         if existing is not None and existing.status == "inactive":
-            mark_lecture_active(lecture.source_id)
+            mark_lecture_active(conn, lecture.source_id)
             activated_count += 1
 
         if existing is None:
             lecture_data = fetch_lecture_data(session, lecture, settings)
-            insert_lecture(lecture_data)
-            embedding_pending_count += queue_embedding_update(lecture_data)
+            insert_lecture(conn, lecture_data)
+            embedding_pending_count += queue_embedding_update(conn, lecture_data)
             inserted_count += 1
             continue
 
         lecture_data = fetch_lecture_data(session, lecture, settings)
         if needs_embedding_update(existing.content_hash, lecture_data.content_hash):
-            update_lecture(lecture_data)
-            embedding_pending_count += queue_embedding_update(lecture_data)
+            update_lecture(conn, lecture_data)
+            embedding_pending_count += queue_embedding_update(conn, lecture_data)
             updated_count += 1
             continue
 
-        update_lecture_seen(lecture_data)
+        update_lecture_seen(conn, lecture_data)
 
     return SyncLectureResult(
         fetched_count=len(available_lectures),
