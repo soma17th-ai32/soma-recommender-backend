@@ -77,7 +77,7 @@ AI 참고 문서:
 
 실행 흐름:
 
-1. `.env`에서 소마 로그인 정보, Upstage API key, DB URL을 읽습니다.
+1. `.env_share`를 참고해 구성한 `.env`에서 소마 로그인 정보, Upstage API key, DB URL을 읽습니다.
 2. 소마 사이트에 로그인합니다.
 3. 접수 가능 특강 목록을 수집합니다.
 4. 각 특강의 상세 페이지에 접속해서 제목과 설명을 가져옵니다.
@@ -85,7 +85,7 @@ AI 참고 문서:
 6. DB에는 있는데 현재 목록에 없는 특강은 `inactive`로 바꿉니다.
 7. DB에 없는 특강은 insert합니다.
 8. 기존에 `inactive`였던 특강이 다시 보이면 `active`로 바꿉니다.
-9. `SWM_DETAIL_REFRESH_INTERVAL_SECONDS` 안에 이미 확인한 기존 특강은 상세 재조회를 생략할 수 있습니다.
+9. `SWM_DETAIL_REFRESH_INTERVAL_SECONDS` 초 안에 이미 확인한 기존 특강은 상세 재조회를 생략할 수 있습니다.
 10. 제목 또는 설명이 바뀐 특강은 `content_hash` 변경으로 감지합니다.
 11. 신규 또는 변경 특강은 Upstage embedding을 생성해서 pgvector에 저장합니다.
 

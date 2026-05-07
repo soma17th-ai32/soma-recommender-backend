@@ -32,7 +32,9 @@ docker start soma-postgres
 
 ## 3. 프로젝트 루트 .env 설정
 
-프로젝트 루트의 `.env`에 아래 값을 추가합니다.
+프로젝트 루트의 `.env_share`를 참고해서 프로젝트 루트에 `.env`를 구성합니다. `.env_share`는 공유용 양식이고, 실제 계정/API key가 들어간 `.env`는 커밋하지 않습니다.
+
+로컬 Docker DB를 사용할 때는 아래 값을 사용합니다.
 
 ```env
 DATABASE_URL=postgresql://soma:soma@localhost:5432/soma_recommender
@@ -44,11 +46,19 @@ DATABASE_URL=postgresql://soma:soma@localhost:5432/soma_recommender
 SWM_MAX_PAGES=1
 ```
 
-기존 row의 상세 페이지 재조회 비용을 줄이고 싶으면 선택적으로 interval을 설정합니다. 기본값은 없으며, 설정하지 않으면 매 sync마다 기존 row도 상세 페이지를 다시 확인합니다.
+기존 row의 상세 페이지 재조회 비용을 줄이고 싶으면 선택적으로 interval을 설정합니다. 값은 초 단위 정수입니다. 기본값은 없으며, 비워두면 매 sync마다 기존 row도 상세 페이지를 다시 확인합니다.
+
+예시:
+
+- `3600`: 마지막 확인 후 1시간 안에는 상세 페이지 재조회 생략
+- `21600`: 마지막 확인 후 6시간 안에는 상세 페이지 재조회 생략
+- `86400`: 마지막 확인 후 1일 안에는 상세 페이지 재조회 생략
 
 ```env
 SWM_DETAIL_REFRESH_INTERVAL_SECONDS=86400
 ```
+
+Upstage base URL과 embedding model은 코드에 기본값이 있습니다. 기본값을 쓸 때는 `.env`에 `UPSTAGE_BASE_URL`, `UPSTAGE_EMBEDDING_MODEL`을 넣지 않아도 됩니다.
 
 ## 4. DB 스키마 적용
 

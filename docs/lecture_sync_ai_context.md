@@ -23,7 +23,7 @@
 
 이 구현은 추천 로직을 담당하지 않습니다. 추천 API나 agent 패키지의 추천 알고리즘은 다른 담당 영역입니다.
 
-## 현재 책임
+## lecture_sync 책임
 
 `lecture_sync` 패키지의 책임:
 
@@ -61,7 +61,7 @@ DB sync 실행:
 
 ## 환경변수
 
-프로젝트 루트 `.env`에서 읽습니다. 값 자체는 문서나 코드에 커밋하지 않습니다.
+프로젝트 루트 `.env`에서 읽습니다. 팀원은 프로젝트 루트의 `.env_share`를 참고해서 각자 `.env`를 구성하면 됩니다. 실제 값이 들어간 `.env`는 문서나 코드에 커밋하지 않습니다.
 
 필수:
 
@@ -76,11 +76,11 @@ DB sync 실행:
 선택:
 
 - `SWM_MAX_PAGES`: 수집할 최대 페이지 수. 로컬 테스트에서는 `1` 권장
-- `SWM_DETAIL_REFRESH_INTERVAL_SECONDS`: 기존 row의 상세 페이지 재조회 생략 interval. 기본값 없음
+- `SWM_DETAIL_REFRESH_INTERVAL_SECONDS`: 기존 row의 상세 페이지 재조회 생략 interval. 초 단위 정수 사용. 예: `3600`은 1시간, `86400`은 1일. 빈 값이면 매 sync마다 기존 row도 상세 페이지를 다시 확인
 - `SWM_TIMEOUT_SECONDS`: 요청 timeout. 기본값 `20`
 - `USER_AGENT`: 요청 User-Agent override
-- `UPSTAGE_BASE_URL`: 기본값 `https://api.upstage.ai/v1`
-- `UPSTAGE_EMBEDDING_MODEL`: 기본값 `embedding-passage`
+- `UPSTAGE_BASE_URL`: 코드 기본값 `https://api.upstage.ai/v1`. 기본값을 쓸 때는 `.env`에 없어도 됨
+- `UPSTAGE_EMBEDDING_MODEL`: 코드 기본값 `embedding-passage`. 기본값을 쓸 때는 `.env`에 없어도 됨
 
 ## 데이터 모델
 
