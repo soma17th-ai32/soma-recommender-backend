@@ -12,10 +12,18 @@ PROFILE_SYSTEM_PROMPT = """
 """.strip()
 
 
-def build_profile_user_prompt(histories: list[History]) -> str:
+def build_profile_user_prompt(
+    histories: list[History],
+    title_max_chars: int = 120,
+    body_max_chars: int = 800,
+) -> str:
     """관심사 추출용 사용자 프롬프트를 만든다."""
 
-    history_text = build_history_prompt_text(histories)
+    history_text = build_history_prompt_text(
+        histories,
+        title_max_chars,
+        body_max_chars,
+    )
     return f"""
 아래 수강 이력의 제목과 본문만 보고 관심사를 추출해줘.
 
@@ -26,18 +34,40 @@ def build_profile_user_prompt(histories: list[History]) -> str:
 """.strip()
 
 
-def build_history_prompt_text(histories: list[History]) -> str:
+def build_history_prompt_text(
+    histories: list[History],
+    title_max_chars: int = 120,
+    body_max_chars: int = 800,
+) -> str:
     """수강 이력 목록을 프롬프트용 텍스트로 만든다."""
 
     lines = []
     for index, history in enumerate(histories, start=1):
-        lines.extend(build_history_lines(index, history))
+        lines.extend(
+            build_history_lines(index, history, title_max_chars, body_max_chars),
+        )
     return "\n".join(lines)
 
 
-def build_history_lines(index: int, history: History) -> list[str]:
+def build_history_lines(
+    index: int,
+    history: History,
+    title_max_chars: int,
+    body_max_chars: int,
+) -> list[str]:
     """수강 이력 하나를 프롬프트용 줄 목록으로 만든다."""
 
-    lines = [f"{index}. 제목: {history.title or ''}"]
-    lines.append(f"   본문: {history.body or ''}")
+    title = truncate_text(history.title, title_max_chars)
+    body = truncate_text(history.body, body_max_chars)
+    lines = [f"{index}. 제목: {title}"]
+    lines.append(f"   본문: {body}")
     return lines
+
+
+def truncate_text(value: str | None, max_chars: int) -> str:
+    """문자열을 최대 길이에 맞게 자른다."""
+
+    text = (value or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip()

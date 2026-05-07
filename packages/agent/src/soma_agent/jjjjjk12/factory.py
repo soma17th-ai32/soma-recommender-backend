@@ -24,6 +24,7 @@ def create_jjjjjk12_workflow(
         embedding_client=create_embedding_client(settings),
         vector_search_client=create_vector_search_client(settings),
         reason_generator=FallbackReasonGenerator(),
+        profile_history_limit=settings.profile_history_limit,
     )
 
 
@@ -35,7 +36,12 @@ def create_profile_extractor(settings: Jjjjjk12AgentSettings) -> LlmProfileExtra
         base_url=settings.upstage_base_url,
         timeout=settings.timeout_seconds,
     )
-    return LlmProfileExtractor(client, settings.upstage_chat_model)
+    return LlmProfileExtractor(
+        client,
+        settings.upstage_chat_model,
+        title_max_chars=settings.profile_title_max_chars,
+        body_max_chars=settings.profile_body_max_chars,
+    )
 
 
 def create_embedding_client(settings: Jjjjjk12AgentSettings) -> UpstageEmbeddingClient:

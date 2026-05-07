@@ -41,9 +41,18 @@ class ProfileExtractionResponse(BaseModel):
 class LlmProfileExtractor:
     """LLM을 사용해 수강 이력에서 관심사를 추출한다."""
 
-    def __init__(self, client: OpenAI, model: str, fallback=None) -> None:
+    def __init__(
+        self,
+        client: OpenAI,
+        model: str,
+        title_max_chars: int = 120,
+        body_max_chars: int = 800,
+        fallback=None,
+    ) -> None:
         self.client = client
         self.model = model
+        self.title_max_chars = title_max_chars
+        self.body_max_chars = body_max_chars
         self.fallback = fallback or FallbackProfileExtractor()
 
     def extract(self, histories: list[History]) -> InterestProfile:
@@ -61,12 +70,21 @@ class LlmProfileExtractor:
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=build_profile_messages(histories),
+                messages=self._build_messages(histories),
                 response_format={"type": "json_object"},
             )
             return response.choices[0].message.content or ""
         except (OpenAIError, IndexError, AttributeError) as error:
             raise ProfileExtractionError("LLM 관심사 추출에 실패했습니다.") from error
+
+    def _build_messages(self, histories: list[History]) -> list[dict[str, str]]:
+        """설정된 길이 제한을 적용해 LLM 메시지를 만든다."""
+
+        return build_profile_messages(
+            histories,
+            self.title_max_chars,
+            self.body_max_chars,
+        )
 
 
 class FallbackProfileExtractor:
@@ -90,12 +108,19 @@ def collect_history_text(histories: list[History]) -> str:
     return " ".join(parts)
 
 
-def build_profile_messages(histories: list[History]) -> list[dict[str, str]]:
+def build_profile_messages(
+    histories: list[History],
+    title_max_chars: int = 120,
+    body_max_chars: int = 800,
+) -> list[dict[str, str]]:
     """LLM chat completion 요청 메시지를 만든다."""
 
     return [
         {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
-        {"role": "user", "content": build_profile_user_prompt(histories)},
+        {
+            "role": "user",
+            "content": build_profile_user_prompt(histories, title_max_chars, body_max_chars),
+        },
     ]
 
 

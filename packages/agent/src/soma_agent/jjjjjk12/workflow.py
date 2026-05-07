@@ -24,17 +24,20 @@ class Jjjjjk12RecommendationWorkflow:
         embedding_client,
         vector_search_client,
         reason_generator,
+        profile_history_limit: int = 10,
     ) -> None:
         self.profile_extractor = profile_extractor
         self.embedding_client = embedding_client
         self.vector_search_client = vector_search_client
         self.reason_generator = reason_generator
+        self.profile_history_limit = profile_history_limit
 
     def recommend(self, request: RecommendationRequest) -> RecommendationResult:
         """추천 요청을 처리하고 최종 추천 결과를 반환한다."""
 
         histories = self._prepare_histories(request.histories)
-        profile = self.profile_extractor.extract(histories)
+        profile_histories = self._select_profile_histories(histories)
+        profile = self.profile_extractor.extract(profile_histories)
         embedding = self._create_query_embedding(profile)
         candidates = self._search_candidates(embedding, request.limit)
         candidates = self._filter_candidates(candidates, histories)
@@ -46,6 +49,12 @@ class Jjjjjk12RecommendationWorkflow:
         """workflow에서 사용할 수강 이력을 준비한다."""
 
         return prepare_histories(histories)
+
+    def _select_profile_histories(self, histories: list[History]) -> list[History]:
+        """관심사 추출에 사용할 최신 수강 이력만 고른다."""
+
+        limit = max(self.profile_history_limit, 1)
+        return histories[:limit]
 
     def _create_query_embedding(self, profile: InterestProfile) -> list[float]:
         """관심사 프로필을 검색용 임베딩으로 변환한다."""

@@ -12,6 +12,9 @@ from soma_agent.jjjjjk12.embedding import DEFAULT_UPSTAGE_EMBEDDING_MODEL
 
 
 DEFAULT_UPSTAGE_CHAT_MODEL = "solar-pro2"
+DEFAULT_PROFILE_HISTORY_LIMIT = 10
+DEFAULT_PROFILE_TITLE_MAX_CHARS = 120
+DEFAULT_PROFILE_BODY_MAX_CHARS = 800
 
 
 @dataclass(frozen=True)
@@ -24,6 +27,9 @@ class Jjjjjk12AgentSettings:
     upstage_embedding_model: str = DEFAULT_UPSTAGE_EMBEDDING_MODEL
     upstage_chat_model: str = DEFAULT_UPSTAGE_CHAT_MODEL
     timeout_seconds: float = 20.0
+    profile_history_limit: int = DEFAULT_PROFILE_HISTORY_LIMIT
+    profile_title_max_chars: int = DEFAULT_PROFILE_TITLE_MAX_CHARS
+    profile_body_max_chars: int = DEFAULT_PROFILE_BODY_MAX_CHARS
 
 
 def load_jjjjjk12_settings() -> Jjjjjk12AgentSettings:
@@ -37,6 +43,9 @@ def load_jjjjjk12_settings() -> Jjjjjk12AgentSettings:
         upstage_embedding_model=get_env("UPSTAGE_EMBEDDING_MODEL", DEFAULT_UPSTAGE_EMBEDDING_MODEL),
         upstage_chat_model=get_env("UPSTAGE_CHAT_MODEL", DEFAULT_UPSTAGE_CHAT_MODEL),
         timeout_seconds=float(get_env("UPSTAGE_TIMEOUT_SECONDS", "20")),
+        profile_history_limit=get_int_env("JJJJJK12_PROFILE_HISTORY_LIMIT", DEFAULT_PROFILE_HISTORY_LIMIT),
+        profile_title_max_chars=get_int_env("JJJJJK12_PROFILE_TITLE_MAX_CHARS", DEFAULT_PROFILE_TITLE_MAX_CHARS),
+        profile_body_max_chars=get_int_env("JJJJJK12_PROFILE_BODY_MAX_CHARS", DEFAULT_PROFILE_BODY_MAX_CHARS),
     )
 
 
@@ -53,3 +62,12 @@ def get_env(name: str, default: str) -> str:
     """선택 환경변수를 읽는다."""
 
     return os.getenv(name, default)
+
+
+def get_int_env(name: str, default: int) -> int:
+    """정수형 선택 환경변수를 읽는다."""
+
+    value = os.getenv(name)
+    if not value:
+        return default
+    return int(value)
