@@ -168,7 +168,7 @@ vector_dims = 4096
 - `fetch_lecture_detail()`: 상세 페이지 추출
 - `insert_lecture()`, `update_lecture()`, `update_lecture_seen()`: DB 저장
 - `mark_lectures_inactive()`, `mark_lecture_active()`: 상태 갱신
-- `queue_embedding_update()`: embedding 생성과 pgvector 저장
+- `update_lecture_embedding()`: embedding 생성과 pgvector 저장
 
 `apps/api/sql/001_create_lectures.sql`
 

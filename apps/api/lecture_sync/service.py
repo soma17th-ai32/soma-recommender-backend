@@ -14,8 +14,8 @@ from apps.api.lecture_sync.repository import (
     insert_lecture,
     mark_lecture_active,
     mark_lectures_inactive,
-    queue_embedding_update,
     update_lecture,
+    update_lecture_embedding,
     update_lecture_seen,
 )
 from apps.api.lecture_sync.settings import load_soma_settings
@@ -72,14 +72,14 @@ def refresh_lecture_status(
         if existing is None:
             lecture_data = fetch_lecture_data(session, lecture, settings)
             insert_lecture(conn, lecture_data)
-            embedding_pending_count += queue_embedding_update(conn, lecture_data)
+            embedding_pending_count += update_lecture_embedding(conn, lecture_data)
             inserted_count += 1
             continue
 
         lecture_data = fetch_lecture_data(session, lecture, settings)
         if needs_embedding_update(existing.content_hash, lecture_data.content_hash):
             update_lecture(conn, lecture_data)
-            embedding_pending_count += queue_embedding_update(conn, lecture_data)
+            embedding_pending_count += update_lecture_embedding(conn, lecture_data)
             updated_count += 1
             continue
 

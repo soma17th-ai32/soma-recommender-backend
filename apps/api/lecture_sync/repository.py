@@ -158,7 +158,7 @@ def mark_lecture_active(conn, source_id: str) -> None:
         )
 
 
-def queue_embedding_update(conn, lecture: LectureData) -> int:
+def update_lecture_embedding(conn, lecture: LectureData) -> int:
     """Upstage 임베딩을 생성해 pgvector 컬럼에 저장한다."""
 
     embedding = embed_text(build_embedding_text(lecture.title, lecture.description))

@@ -45,8 +45,8 @@ from apps.api.lecture_sync.repository import (
     insert_lecture,
     mark_lecture_active,
     mark_lectures_inactive,
-    queue_embedding_update,
     update_lecture,
+    update_lecture_embedding,
     update_lecture_seen,
 )
 from apps.api.lecture_sync.service import sync_lecture
@@ -98,8 +98,8 @@ __all__ = [
     "mark_lectures_inactive",
     "needs_embedding_update",
     "parse_lecture_list",
-    "queue_embedding_update",
     "sync_lecture",
     "update_lecture",
+    "update_lecture_embedding",
     "update_lecture_seen",
 ]

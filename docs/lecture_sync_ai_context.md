@@ -115,7 +115,7 @@ DB sync 실행:
 1. `get_existing_lectures()`로 DB 기존 row 조회
 2. 현재 수집 목록에 없는 기존 row는 `mark_lectures_inactive()`로 `inactive`
 3. 신규 row는 `fetch_lecture_data()` 후 `insert_lecture()`
-4. 신규 row는 `queue_embedding_update()`로 embedding 생성/저장
+4. 신규 row는 `update_lecture_embedding()`으로 embedding 생성/저장
 5. 기존 row가 `inactive`였다가 다시 보이면 `mark_lecture_active()`
 6. 기존 row의 `content_hash`가 바뀌면 `update_lecture()` 후 embedding 재생성
 7. 기존 row의 본문이 그대로면 `update_lecture_seen()`으로 목록 메타데이터와 `last_seen_at`만 갱신
