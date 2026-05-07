@@ -6,8 +6,8 @@ from soma_agent.common.schemas import History
 from soma_agent.common.schemas import RecommendationItem
 from soma_agent.common.schemas import RecommendationRequest
 from soma_agent.common.schemas import RecommendationResult
-from soma_agent.jjjjjk12.errors import EmptyHistoryError
 from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
+from soma_agent.jjjjjk12.history_preprocessor import prepare_histories
 from soma_agent.jjjjjk12.schemas import InterestProfile
 from soma_agent.jjjjjk12.schemas import LectureCandidate
 from soma_agent.jjjjjk12.schemas import ScoredCandidate
@@ -43,9 +43,7 @@ class Jjjjjk12RecommendationWorkflow:
     def _prepare_histories(self, histories: list[History]) -> list[History]:
         """workflow에서 사용할 수강 이력을 준비한다."""
 
-        if not histories:
-            raise EmptyHistoryError("사용 가능한 수강 이력이 없습니다.")
-        return histories
+        return prepare_histories(histories)
 
     def _create_query_embedding(self, profile: InterestProfile) -> list[float]:
         """관심사 프로필을 검색용 임베딩으로 변환한다."""
