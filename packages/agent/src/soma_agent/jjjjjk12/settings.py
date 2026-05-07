@@ -11,6 +11,9 @@ from soma_agent.jjjjjk12.embedding import DEFAULT_UPSTAGE_BASE_URL
 from soma_agent.jjjjjk12.embedding import DEFAULT_UPSTAGE_EMBEDDING_MODEL
 
 
+DEFAULT_UPSTAGE_CHAT_MODEL = "solar-pro2"
+
+
 @dataclass(frozen=True)
 class Jjjjjk12AgentSettings:
     """jjjjjk12 추천 workflow 생성에 필요한 설정."""
@@ -19,6 +22,7 @@ class Jjjjjk12AgentSettings:
     upstage_api_key: str
     upstage_base_url: str = DEFAULT_UPSTAGE_BASE_URL
     upstage_embedding_model: str = DEFAULT_UPSTAGE_EMBEDDING_MODEL
+    upstage_chat_model: str = DEFAULT_UPSTAGE_CHAT_MODEL
     timeout_seconds: float = 20.0
 
 
@@ -31,6 +35,7 @@ def load_jjjjjk12_settings() -> Jjjjjk12AgentSettings:
         upstage_api_key=require_env("UPSTAGE_API_KEY"),
         upstage_base_url=get_env("UPSTAGE_BASE_URL", DEFAULT_UPSTAGE_BASE_URL),
         upstage_embedding_model=get_env("UPSTAGE_EMBEDDING_MODEL", DEFAULT_UPSTAGE_EMBEDDING_MODEL),
+        upstage_chat_model=get_env("UPSTAGE_CHAT_MODEL", DEFAULT_UPSTAGE_CHAT_MODEL),
         timeout_seconds=float(get_env("UPSTAGE_TIMEOUT_SECONDS", "20")),
     )
 

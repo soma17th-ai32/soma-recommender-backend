@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from openai import OpenAI
+
 from soma_agent.jjjjjk12.embedding import UpstageEmbeddingClient
-from soma_agent.jjjjjk12.profile_extractor import FallbackProfileExtractor
+from soma_agent.jjjjjk12.profile_extractor import LlmProfileExtractor
 from soma_agent.jjjjjk12.reason_generator import FallbackReasonGenerator
 from soma_agent.jjjjjk12.settings import Jjjjjk12AgentSettings
 from soma_agent.jjjjjk12.settings import load_jjjjjk12_settings
@@ -18,11 +20,22 @@ def create_jjjjjk12_workflow(
 
     settings = settings or load_jjjjjk12_settings()
     return Jjjjjk12RecommendationWorkflow(
-        profile_extractor=FallbackProfileExtractor(),
+        profile_extractor=create_profile_extractor(settings),
         embedding_client=create_embedding_client(settings),
         vector_search_client=create_vector_search_client(settings),
         reason_generator=FallbackReasonGenerator(),
     )
+
+
+def create_profile_extractor(settings: Jjjjjk12AgentSettings) -> LlmProfileExtractor:
+    """LLM 관심사 추출기를 생성한다."""
+
+    client = OpenAI(
+        api_key=settings.upstage_api_key,
+        base_url=settings.upstage_base_url,
+        timeout=settings.timeout_seconds,
+    )
+    return LlmProfileExtractor(client, settings.upstage_chat_model)
 
 
 def create_embedding_client(settings: Jjjjjk12AgentSettings) -> UpstageEmbeddingClient:
