@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from hashlib import sha256
 import os
 import time
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
+from openai import OpenAI
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -73,6 +75,15 @@ class SomaSettings:
     max_pages: int | None = None
 
 
+@dataclass(frozen=True)
+class UpstageSettings:
+    """Upstage 임베딩 API 호출에 필요한 설정."""
+
+    api_key: str
+    base_url: str = "https://api.upstage.ai/v1"
+    embedding_model: str = "embedding-passage"
+
+
 def sync_lecture() -> SyncLectureResult:
     """소마 특강 목록 수집부터 DB 상태 갱신까지 수행하는 메인 진입점."""
 
@@ -131,6 +142,51 @@ def print_live_lecture_preview(limit: int = 10) -> None:
     print(detail.description)
 
 
+def print_live_embedding_preview(limit: int = 10, preview_size: int = 8) -> None:
+    """첫 번째 접수 가능 특강 상세 내용을 Upstage로 임베딩하고 요약 출력한다."""
+
+    settings = load_soma_settings()
+    session = create_soma_session(settings)
+
+    if not is_session_alive(session, settings):
+        login_soma_site(session, settings)
+
+    lectures = fetch_available_lecture_list(session, settings)
+    if not lectures:
+        print("\nNo available lectures found.")
+        return
+
+    print(f"\n=== SOMA lecture list top {limit} ===")
+    for index, lecture in enumerate(lectures[:limit], start=1):
+        print(
+            f"{index}. "
+            f"source_id={lecture.source_id}, "
+            f"title={lecture.title}, "
+            f"status={lecture.status}, "
+            f"author={lecture.author}, "
+            f"registered_at={lecture.registered_at}, "
+            f"detail_url={lecture.detail_url}"
+        )
+
+    detail = fetch_lecture_detail(session, lectures[0].detail_url, settings)
+    embedding = embed_lecture_detail(detail)
+
+    print("\n=== SOMA first lecture detail ===")
+    print(f"source_id={detail.source_id}")
+    print(f"title={detail.title}")
+    print(f"detail_url={detail.detail_url}")
+    print(f"content_hash={detail.content_hash}")
+    print("description:")
+    print(detail.description)
+
+    print("\n=== SOMA first lecture embedding ===")
+    print(f"model={load_upstage_settings().embedding_model}")
+    print(f"source_id={detail.source_id}")
+    print(f"title={detail.title}")
+    print(f"embedding_dimension={len(embedding)}")
+    print(f"embedding_preview={embedding[:preview_size]}")
+
+
 def load_soma_settings() -> SomaSettings:
     """프로젝트 루트 .env와 환경변수에서 소마 사이트 접속 설정을 읽는다."""
 
@@ -160,6 +216,47 @@ def load_soma_settings() -> SomaSettings:
         user_agent=os.getenv("USER_AGENT", "Mozilla/5.0 (compatible; SOMA-Recommender/0.1)"),
         max_pages=int(max_pages) if max_pages else None,
     )
+
+
+def load_upstage_settings() -> UpstageSettings:
+    """프로젝트 루트 .env와 환경변수에서 Upstage 임베딩 설정을 읽는다."""
+
+    load_dotenv()
+
+    api_key = os.getenv("UPSTAGE_API_KEY")
+    if not api_key:
+        raise RuntimeError("Missing required environment variable: UPSTAGE_API_KEY")
+
+    return UpstageSettings(
+        api_key=api_key,
+        base_url=os.getenv("UPSTAGE_BASE_URL", "https://api.upstage.ai/v1"),
+        embedding_model=os.getenv("UPSTAGE_EMBEDDING_MODEL", "embedding-passage"),
+    )
+
+
+def create_upstage_client(settings: UpstageSettings | None = None) -> OpenAI:
+    """OpenAI 호환 클라이언트로 Upstage API client를 생성한다."""
+
+    settings = settings or load_upstage_settings()
+    return OpenAI(api_key=settings.api_key, base_url=settings.base_url)
+
+
+def embed_text(text: str) -> list[float]:
+    """Upstage embedding API로 텍스트를 벡터로 변환한다."""
+
+    settings = load_upstage_settings()
+    client = create_upstage_client(settings)
+    response = client.embeddings.create(
+        input=text,
+        model=settings.embedding_model,
+    )
+    return response.data[0].embedding
+
+
+def embed_lecture_detail(detail: LectureDetail) -> list[float]:
+    """특강 제목과 설명만 사용해 저장용 문서 임베딩을 생성한다."""
+
+    return embed_text(build_embedding_text(detail.title, detail.description))
 
 
 def create_soma_session(settings: SomaSettings) -> requests.Session:
@@ -608,5 +705,19 @@ def _clean_text(value: str) -> str:
     return " ".join(value.replace("\xa0", " ").split())
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """로컬 확인용 CLI 진입점."""
+
+    parser = argparse.ArgumentParser(description="SOMA lecture crawler utilities")
+    parser.add_argument("--embed", action="store_true", help="also create an Upstage embedding for the first lecture")
+    args = parser.parse_args()
+
+    if args.embed:
+        print_live_embedding_preview()
+        return
+
     print_live_lecture_preview()
+
+
+if __name__ == "__main__":
+    main()
