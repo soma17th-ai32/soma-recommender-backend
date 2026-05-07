@@ -49,9 +49,10 @@ from apps.api.lecture_sync.repository import (
     mark_lectures_inactive,
     update_lecture,
     update_lecture_embedding,
+    update_lecture_list_metadata,
     update_lecture_seen,
 )
-from apps.api.lecture_sync.service import sync_lecture
+from apps.api.lecture_sync.service import should_skip_detail_refresh, sync_lecture
 from apps.api.lecture_sync.settings import (
     load_database_url,
     load_soma_settings,
@@ -103,7 +104,9 @@ __all__ = [
     "needs_embedding_update",
     "parse_lecture_list",
     "sync_lecture",
+    "should_skip_detail_refresh",
     "update_lecture",
     "update_lecture_embedding",
+    "update_lecture_list_metadata",
     "update_lecture_seen",
 ]

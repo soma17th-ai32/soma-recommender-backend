@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ class LectureRecord(LectureBase):
 
     status: str
     content_hash: str
+    last_seen_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -76,6 +78,7 @@ class SomaSettings:
     timeout_seconds: float = 20.0
     user_agent: str = "Mozilla/5.0 (compatible; SOMA-Recommender/0.1)"
     max_pages: int | None = None
+    detail_refresh_interval_seconds: int | None = None
 
 
 @dataclass(frozen=True)

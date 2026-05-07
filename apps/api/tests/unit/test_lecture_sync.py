@@ -1,6 +1,10 @@
+from datetime import datetime, timedelta, timezone
+
 from bs4 import BeautifulSoup
 
 from apps.api.lecture_sync import (
+    LectureRecord,
+    SomaSettings,
     _clean_text,
     _extract_login_payload,
     _format_pgvector,
@@ -10,6 +14,7 @@ from apps.api.lecture_sync import (
     make_content_hash,
     needs_embedding_update,
     parse_lecture_list,
+    should_skip_detail_refresh,
 )
 
 
@@ -124,3 +129,44 @@ def test_validate_lecture_detail_fields_rejects_empty_description() -> None:
         assert "10268" in str(error)
     else:
         raise AssertionError("Expected RuntimeError")
+
+
+def test_should_skip_detail_refresh_when_seen_recently() -> None:
+    record = LectureRecord(
+        source_id="10268",
+        title="title",
+        description="description",
+        status="active",
+        content_hash="hash",
+        last_seen_at=datetime.now(timezone.utc) - timedelta(seconds=30),
+    )
+    settings = SomaSettings(
+        base_url="https://example.com",
+        login_url="https://example.com/login",
+        lecture_list_url="https://example.com/list",
+        username="user",
+        password="password",
+        detail_refresh_interval_seconds=60,
+    )
+
+    assert should_skip_detail_refresh(record, settings)
+
+
+def test_should_not_skip_detail_refresh_without_interval_or_seen_at() -> None:
+    record = LectureRecord(
+        source_id="10268",
+        title="title",
+        description="description",
+        status="active",
+        content_hash="hash",
+        last_seen_at=None,
+    )
+    settings = SomaSettings(
+        base_url="https://example.com",
+        login_url="https://example.com/login",
+        lecture_list_url="https://example.com/list",
+        username="user",
+        password="password",
+    )
+
+    assert not should_skip_detail_refresh(record, settings)

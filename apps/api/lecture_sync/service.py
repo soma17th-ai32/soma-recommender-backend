@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import psycopg
 
 from apps.api.lecture_sync.crawler import (
@@ -8,6 +10,7 @@ from apps.api.lecture_sync.crawler import (
     login_soma_site,
 )
 from apps.api.lecture_sync.models import LectureListItem, SomaSettings, SyncLectureResult
+from apps.api.lecture_sync.models import LectureRecord
 from apps.api.lecture_sync.parser import needs_embedding_update
 from apps.api.lecture_sync.repository import (
     get_existing_lectures,
@@ -16,6 +19,7 @@ from apps.api.lecture_sync.repository import (
     mark_lectures_inactive,
     update_lecture,
     update_lecture_embedding,
+    update_lecture_list_metadata,
     update_lecture_seen,
 )
 from apps.api.lecture_sync.settings import load_soma_settings
@@ -69,6 +73,10 @@ def refresh_lecture_status(
             mark_lecture_active(conn, lecture.source_id)
             activated_count += 1
 
+        if existing is not None and should_skip_detail_refresh(existing, settings):
+            update_lecture_list_metadata(conn, lecture)
+            continue
+
         if existing is None:
             lecture_data = fetch_lecture_data(session, lecture, settings)
             insert_lecture(conn, lecture_data)
@@ -93,3 +101,20 @@ def refresh_lecture_status(
         inactivated_count=inactivated_count,
         embedding_pending_count=embedding_pending_count,
     )
+
+
+def should_skip_detail_refresh(existing: LectureRecord, settings: SomaSettings) -> bool:
+    """설정된 refresh interval 안에 이미 본 기존 row는 상세 재조회를 건너뛴다."""
+
+    interval_seconds = settings.detail_refresh_interval_seconds
+    if interval_seconds is None or interval_seconds <= 0:
+        return False
+    if existing.last_seen_at is None or not existing.content_hash:
+        return False
+
+    last_seen_at = existing.last_seen_at
+    if last_seen_at.tzinfo is None:
+        last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
+
+    elapsed_seconds = (datetime.now(timezone.utc) - last_seen_at).total_seconds()
+    return elapsed_seconds < interval_seconds

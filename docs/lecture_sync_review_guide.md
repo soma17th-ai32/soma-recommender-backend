@@ -18,6 +18,7 @@
 - 다시 목록에 나타난 특강 `active` 처리
 - 내용이 바뀐 특강 embedding 재생성
 - 로컬 DB 테스트 문서 작성
+- 선택적 상세 페이지 재조회 생략 옵션
 
 구현하지 않은 것:
 
@@ -69,8 +70,9 @@ AI 참고 문서:
 6. DB에는 있는데 현재 목록에 없는 특강은 `inactive`로 바꿉니다.
 7. DB에 없는 특강은 insert합니다.
 8. 기존에 `inactive`였던 특강이 다시 보이면 `active`로 바꿉니다.
-9. 제목 또는 설명이 바뀐 특강은 `content_hash` 변경으로 감지합니다.
-10. 신규 또는 변경 특강은 Upstage embedding을 생성해서 pgvector에 저장합니다.
+9. `SWM_DETAIL_REFRESH_INTERVAL_SECONDS` 안에 이미 확인한 기존 특강은 상세 재조회를 생략할 수 있습니다.
+10. 제목 또는 설명이 바뀐 특강은 `content_hash` 변경으로 감지합니다.
+11. 신규 또는 변경 특강은 Upstage embedding을 생성해서 pgvector에 저장합니다.
 
 ## 상태 갱신 규칙
 
@@ -178,7 +180,7 @@ vector_dims = 4096
 
 ## 현재 한계
 
-- DB 연결을 함수마다 새로 엽니다. 운영에서는 connection pool로 바꾸는 편이 좋습니다.
+- 현재는 sync 1회당 DB connection 1개를 사용합니다. 운영에서는 connection pool로 확장할 수 있습니다.
 - logger는 아직 없습니다. 팀에서 로깅 방식을 정한 뒤 추가할 예정입니다.
 - migration 도구는 아직 없습니다. 현재는 SQL 파일을 직접 적용합니다.
 - HTML 구조가 바뀌면 selector 수정이 필요합니다.

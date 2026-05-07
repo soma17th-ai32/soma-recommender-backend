@@ -68,6 +68,7 @@ DB sync 실행:
 선택:
 
 - `SWM_MAX_PAGES`: 수집할 최대 페이지 수. 로컬 테스트에서는 `1` 권장
+- `SWM_DETAIL_REFRESH_INTERVAL_SECONDS`: 기존 row의 상세 페이지 재조회 생략 interval. 기본값 없음
 - `SWM_TIMEOUT_SECONDS`: 요청 timeout. 기본값 `20`
 - `USER_AGENT`: 요청 User-Agent override
 - `UPSTAGE_BASE_URL`: 기본값 `https://api.upstage.ai/v1`
@@ -149,7 +150,8 @@ DB sync 실행:
 - 상세 설명은 `.bbs-view-new > .cont`, `.bbs-view-new .cont`에서 추출합니다.
 - embedding은 제목과 설명만 사용합니다. 작성자, 일시, 접수 기간은 embedding 대상이 아닙니다.
 - `content_hash`가 바뀐 경우 기존 embedding을 `NULL`로 비운 뒤 재생성합니다.
-- 현재 DB 함수들은 호출마다 새 connection을 엽니다. 운영 환경에서는 connection pool 또는 앱 공용 DB adapter로 분리할 수 있습니다.
+- `sync_lecture()`는 한 번 연 DB connection을 repository 함수들에 전달합니다.
+- `SWM_DETAIL_REFRESH_INTERVAL_SECONDS`를 설정하면 최근에 확인한 기존 row는 상세 페이지 재조회와 embedding 재확인을 생략합니다.
 - 현재 로거는 의도적으로 넣지 않았습니다.
 
 ## 다음 작업 후보

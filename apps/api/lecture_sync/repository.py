@@ -1,5 +1,5 @@
 from apps.api.lecture_sync.embedding import embed_text
-from apps.api.lecture_sync.models import LectureData, LectureRecord
+from apps.api.lecture_sync.models import LectureData, LectureListItem, LectureRecord
 from apps.api.lecture_sync.parser import build_embedding_text
 
 
@@ -9,7 +9,7 @@ def get_existing_lectures(conn) -> list[LectureRecord]:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT source_id, title, description, status, content_hash
+            SELECT source_id, title, description, status, content_hash, last_seen_at
             FROM lectures
             """
         )
@@ -20,6 +20,7 @@ def get_existing_lectures(conn) -> list[LectureRecord]:
                 description=row[2],
                 status=row[3],
                 content_hash=row[4],
+                last_seen_at=row[5],
             )
             for row in cur.fetchall()
         ]
@@ -119,6 +120,32 @@ def update_lecture_seen(conn, lecture: LectureData) -> None:
             WHERE source_id = %(source_id)s
             """,
             _lecture_params(lecture),
+        )
+
+
+def update_lecture_list_metadata(conn, lecture: LectureListItem) -> None:
+    """상세 본문을 다시 보지 않는 fast-path에서 목록 메타데이터만 갱신한다."""
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE lectures
+            SET status = 'active',
+                receipt_period = %(receipt_period)s,
+                event_date = %(event_date)s,
+                author = %(author)s,
+                registered_at = %(registered_at)s,
+                last_seen_at = now(),
+                updated_at = now()
+            WHERE source_id = %(source_id)s
+            """,
+            {
+                "source_id": lecture.source_id,
+                "receipt_period": lecture.receipt_period,
+                "event_date": lecture.event_date,
+                "author": lecture.author,
+                "registered_at": lecture.registered_at,
+            },
         )
 
 

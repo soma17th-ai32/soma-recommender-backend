@@ -12,6 +12,7 @@ def load_soma_settings() -> SomaSettings:
 
     max_pages = os.getenv("SWM_MAX_PAGES")
     timeout_seconds = os.getenv("SWM_TIMEOUT_SECONDS", "20")
+    detail_refresh_interval_seconds = os.getenv("SWM_DETAIL_REFRESH_INTERVAL_SECONDS")
 
     required_values = {
         "SWM_BASE_URL": os.getenv("SWM_BASE_URL"),
@@ -33,6 +34,9 @@ def load_soma_settings() -> SomaSettings:
         timeout_seconds=float(timeout_seconds),
         user_agent=os.getenv("USER_AGENT", "Mozilla/5.0 (compatible; SOMA-Recommender/0.1)"),
         max_pages=int(max_pages) if max_pages else None,
+        detail_refresh_interval_seconds=(
+            int(detail_refresh_interval_seconds) if detail_refresh_interval_seconds else None
+        ),
     )
 
 
