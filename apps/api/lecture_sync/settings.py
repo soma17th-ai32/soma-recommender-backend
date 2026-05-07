@@ -1,3 +1,5 @@
+"""lecture sync 실행에 필요한 환경변수를 dataclass 설정으로 변환한다."""
+
 import os
 
 from dotenv import load_dotenv
@@ -14,6 +16,7 @@ def load_soma_settings() -> SomaSettings:
     timeout_seconds = os.getenv("SWM_TIMEOUT_SECONDS", "20")
     detail_refresh_interval_seconds = os.getenv("SWM_DETAIL_REFRESH_INTERVAL_SECONDS")
 
+    # 로그인과 목록 수집에 없으면 실행할 수 없는 값만 필수로 검증한다.
     required_values = {
         "SWM_BASE_URL": os.getenv("SWM_BASE_URL"),
         "SWM_LOGIN_URL": os.getenv("SWM_LOGIN_URL"),
@@ -33,6 +36,7 @@ def load_soma_settings() -> SomaSettings:
         password=required_values["SWM_PASSWORD"] or "",
         timeout_seconds=float(timeout_seconds),
         user_agent=os.getenv("USER_AGENT", "Mozilla/5.0 (compatible; SOMA-Recommender/0.1)"),
+        # 빈 값이면 제한 없이 모든 페이지/모든 상세 페이지를 확인한다.
         max_pages=int(max_pages) if max_pages else None,
         detail_refresh_interval_seconds=(
             int(detail_refresh_interval_seconds) if detail_refresh_interval_seconds else None

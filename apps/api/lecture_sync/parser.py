@@ -1,3 +1,5 @@
+"""SOMA HTML과 URL에서 lecture sync에 필요한 값을 추출하는 순수 helper."""
+
 from hashlib import sha256
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
@@ -12,6 +14,7 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
     soup = BeautifulSoup(html, "html.parser")
     table = None
     for candidate in soup.select("table"):
+        # 페이지에 여러 table이 있을 수 있으므로 상세 링크가 들어 있는 table만 목록으로 본다.
         if candidate.select_one("a[href*='mentoLec/view.do'], a[href*='qustnrSn=']"):
             table = candidate.select_one("tbody")
             break
@@ -31,6 +34,7 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
             continue
 
         detail_url = urljoin(base_url, title_anchor.get("href", ""))
+        # DB unique 기준이 되는 source_id가 없는 row는 동기화 대상에서 제외한다.
         source_id = extract_source_id(detail_url)
         if not source_id:
             continue
@@ -54,6 +58,7 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
 def build_embedding_text(title: str, description: str) -> str:
     """임베딩에 사용할 텍스트를 제목과 설명만으로 구성한다."""
 
+    # 메타데이터가 추천 의미를 흐리지 않도록 제목과 설명만 임베딩 입력으로 사용한다.
     return f"{_clean_text(title)}\n{_clean_text(description)}"
 
 
@@ -74,6 +79,7 @@ def extract_source_id(detail_url: str) -> str:
 
     parsed = urlparse(detail_url)
     query = parse_qs(parsed.query)
+    # 현재 SOMA 페이지와 과거/대체 링크 형식을 모두 지원한다.
     for key in ("qustnrSn", "mentoLecSn"):
         values = query.get(key)
         if values and values[0]:
@@ -87,6 +93,7 @@ def _with_page_index(url: str, page_index: int) -> str:
 
     parsed = urlparse(url)
     query = parse_qs(parsed.query, keep_blank_values=True)
+    # 필터 query는 그대로 두고 pageIndex만 교체해 페이지네이션을 순회한다.
     query["pageIndex"] = [str(page_index)]
     return urlunparse(
         (

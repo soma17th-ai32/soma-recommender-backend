@@ -1,3 +1,5 @@
+"""Upstage embedding API를 OpenAI 호환 client로 호출하는 adapter."""
+
 from openai import OpenAI
 
 from apps.api.lecture_sync.models import LectureDetail
@@ -17,6 +19,7 @@ def embed_text(text: str) -> list[float]:
 
     settings = load_upstage_settings()
     client = create_upstage_client(settings)
+    # Upstage는 OpenAI embeddings API와 호환되는 응답 구조를 사용한다.
     response = client.embeddings.create(
         input=text,
         model=settings.embedding_model,

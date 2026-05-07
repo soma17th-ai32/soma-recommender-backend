@@ -1,3 +1,5 @@
+"""SOMA 사이트에 로그인하고 특강 목록/상세 HTML을 수집하는 crawler."""
+
 import time
 from urllib.parse import urljoin
 
@@ -30,6 +32,7 @@ def create_soma_session(settings: SomaSettings) -> requests.Session:
 def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
     """소마 로그인 페이지의 고정 form 구조를 사용해 로그인한다."""
 
+    # 먼저 로그인 페이지를 받아 hidden input과 form action을 실제 HTML에서 읽는다.
     response = session.get(settings.login_url, timeout=settings.timeout_seconds)
     response.raise_for_status()
 
@@ -42,6 +45,7 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
     payload["username"] = settings.username
     payload["password"] = settings.password
 
+    # 로그인 페이지 JavaScript가 호출하는 계정 상태 확인 API를 동일하게 거친다.
     _check_login_available(session, settings, payload)
 
     action = form.get("action")
@@ -50,6 +54,7 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
     action_url = urljoin(settings.base_url, action)
     login_response = session.post(action_url, data=payload, timeout=settings.timeout_seconds)
     login_response.raise_for_status()
+    # SOMA 로그인은 hidden form 자동 submit을 거칠 수 있어 후속 form도 처리한다.
     login_response = _submit_auto_forms(session, login_response, settings)
 
     if _looks_like_login_page(login_response.text, str(login_response.url)):
@@ -76,6 +81,7 @@ def fetch_available_lecture_list(
     page_index = 1
 
     while True:
+        # 로컬 테스트에서는 SWM_MAX_PAGES로 외부 요청과 embedding 비용을 제한할 수 있다.
         if settings.max_pages is not None and page_index > settings.max_pages:
             break
 
@@ -85,6 +91,7 @@ def fetch_available_lecture_list(
         )
         response.raise_for_status()
 
+        # 세션이 만료되면 같은 session에 다시 로그인하고 현재 페이지 요청을 재시도한다.
         if _response_requires_login(response):
             login_soma_site(session, settings)
             response = session.get(
@@ -99,8 +106,10 @@ def fetch_available_lecture_list(
 
         lectures.extend(page_items)
         page_index += 1
+        # SOMA 사이트에 짧은 간격으로 연속 요청하지 않도록 페이지 간 텀을 둔다.
         time.sleep(0.5)
 
+    # 페이지 이동 중 중복 row가 보이더라도 source_id 기준으로 하나만 유지한다.
     deduped = {lecture.source_id: lecture for lecture in lectures}
     return list(deduped.values())
 
@@ -115,6 +124,7 @@ def fetch_lecture_detail(
     response = session.get(detail_url, timeout=settings.timeout_seconds)
     response.raise_for_status()
 
+    # 상세 페이지 접근 중 세션이 만료된 경우도 목록 수집과 동일하게 복구한다.
     if _response_requires_login(response):
         login_soma_site(session, settings)
         response = session.get(detail_url, timeout=settings.timeout_seconds)
@@ -124,6 +134,7 @@ def fetch_lecture_detail(
     source_id = _extract_detail_source_id(soup) or extract_source_id(detail_url)
     title = _extract_detail_title(soup)
     description = _extract_detail_description(soup)
+    # 빈 제목/설명은 가비지 row와 불필요한 embedding 호출을 만들기 전에 차단한다.
     _validate_lecture_detail_fields(source_id, title, description)
     return LectureDetail(
         source_id=source_id,
@@ -151,6 +162,7 @@ def fetch_lecture_data(
     """목록 row와 상세 페이지 본문을 합쳐 DB 저장용 데이터를 만든다."""
 
     detail = fetch_lecture_detail(session, lecture.detail_url, settings)
+    # 목록 페이지의 접수 기간/작성자 정보와 상세 페이지의 본문 정보를 하나의 저장 단위로 합친다.
     return LectureData(
         source_id=detail.source_id,
         title=detail.title,
@@ -232,6 +244,7 @@ def _submit_auto_forms(
         if not payload:
             return current
 
+        # hidden input만 있는 relay form을 순서대로 submit해 최종 로그인 세션을 완성한다.
         current = session.post(
             urljoin(settings.base_url, action),
             data=payload,
@@ -293,6 +306,7 @@ def _looks_like_login_page(html: str, url: str) -> bool:
 
     soup = BeautifulSoup(html, "html.parser")
     page_text = soup.get_text(" ", strip=True)
+    # 로그인 후 페이지에는 로그아웃/MY PAGE가 보이므로 로그인 화면으로 오탐하지 않는다.
     if "로그아웃" in page_text or "MY PAGE" in page_text:
         return False
     return "로그인" in page_text and "비밀번호" in page_text

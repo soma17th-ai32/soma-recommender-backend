@@ -1,3 +1,5 @@
+"""lectures 테이블을 읽고 쓰는 PostgreSQL/pgvector repository."""
+
 from apps.api.lecture_sync.embedding import embed_text
 from apps.api.lecture_sync.models import LectureData, LectureListItem, LectureRecord
 from apps.api.lecture_sync.parser import build_embedding_text
@@ -30,6 +32,7 @@ def insert_lecture(conn, lecture: LectureData) -> None:
     """신규 특강을 active 상태로 DB에 저장한다."""
 
     with conn.cursor() as cur:
+        # source_id는 SOMA qustnrSn이므로 같은 특강이 다시 들어오면 active row로 갱신한다.
         cur.execute(
             """
             INSERT INTO lectures (
@@ -81,6 +84,7 @@ def update_lecture(conn, lecture: LectureData) -> None:
     """내용이 변경된 기존 특강 row를 갱신하고 임베딩을 비운다."""
 
     with conn.cursor() as cur:
+        # content_hash가 바뀐 row는 이전 embedding이 낡았으므로 NULL 처리 후 다시 저장한다.
         cur.execute(
             """
             UPDATE lectures
@@ -107,6 +111,7 @@ def update_lecture_seen(conn, lecture: LectureData) -> None:
     """본문이 그대로인 특강의 목록 메타데이터와 마지막 발견 시각만 갱신한다."""
 
     with conn.cursor() as cur:
+        # 상세 본문은 이미 비교된 상태이므로 embedding 관련 컬럼은 건드리지 않는다.
         cur.execute(
             """
             UPDATE lectures
@@ -156,6 +161,7 @@ def mark_lectures_inactive(conn, source_ids: set[str]) -> int:
         return 0
 
     with conn.cursor() as cur:
+        # 이미 inactive인 row는 rowcount에서 제외해 실제 변경 건수만 반환한다.
         cur.execute(
             """
             UPDATE lectures
@@ -188,6 +194,7 @@ def mark_lecture_active(conn, source_id: str) -> None:
 def update_lecture_embedding(conn, lecture: LectureData) -> int:
     """Upstage 임베딩을 생성해 pgvector 컬럼에 저장한다."""
 
+    # embedding text는 추천 품질을 위해 제목과 설명만 사용한다.
     embedding = embed_text(build_embedding_text(lecture.title, lecture.description))
     with conn.cursor() as cur:
         cur.execute(
@@ -222,4 +229,5 @@ def _lecture_params(lecture: LectureData) -> dict[str, str | None]:
 def _format_pgvector(embedding: list[float]) -> str:
     """pgvector가 받을 수 있는 '[0.1,0.2,...]' 문자열로 변환한다."""
 
+    # psycopg가 vector 타입을 직접 알지 못하므로 pgvector literal 문자열로 넘긴다.
     return "[" + ",".join(str(value) for value in embedding) + "]"

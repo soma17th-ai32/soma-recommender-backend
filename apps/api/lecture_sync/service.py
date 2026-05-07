@@ -1,3 +1,5 @@
+"""SOMA 특강 수집 결과를 DB 상태와 임베딩 상태로 동기화하는 서비스 계층."""
+
 from datetime import datetime, timezone
 
 import psycopg
@@ -64,19 +66,24 @@ def refresh_lecture_status(
     activated_count = 0
     embedding_pending_count = 0
 
+    # 현재 접수 가능 목록에서 사라진 기존 특강은 추천 대상에서 제외되도록 비활성화한다.
     missing_ids = existing_ids - available_ids
     inactivated_count = mark_lectures_inactive(conn, missing_ids)
 
     for lecture in available_lectures:
         existing = existing_by_id.get(lecture.source_id)
+
+        # 이전 sync에서 비활성화된 특강이 다시 목록에 보이면 active로 복구한다.
         if existing is not None and existing.status == "inactive":
             mark_lecture_active(conn, lecture.source_id)
             activated_count += 1
 
+        # 비용 절감 옵션이 켜진 경우, 최근 확인한 기존 row는 상세 페이지와 embedding 호출을 건너뛴다.
         if existing is not None and should_skip_detail_refresh(existing, settings):
             update_lecture_list_metadata(conn, lecture)
             continue
 
+        # 신규 특강은 상세 본문까지 수집한 뒤 DB row와 embedding을 함께 만든다.
         if existing is None:
             lecture_data = fetch_lecture_data(session, lecture, settings)
             insert_lecture(conn, lecture_data)
@@ -85,12 +92,14 @@ def refresh_lecture_status(
             continue
 
         lecture_data = fetch_lecture_data(session, lecture, settings)
+        # 제목이나 설명이 바뀐 경우에만 기존 embedding을 버리고 새 embedding을 저장한다.
         if needs_embedding_update(existing.content_hash, lecture_data.content_hash):
             update_lecture(conn, lecture_data)
             embedding_pending_count += update_lecture_embedding(conn, lecture_data)
             updated_count += 1
             continue
 
+        # 본문은 그대로지만 목록 메타데이터와 마지막 발견 시각은 최신 상태로 맞춘다.
         update_lecture_seen(conn, lecture_data)
 
     return SyncLectureResult(
@@ -113,6 +122,7 @@ def should_skip_detail_refresh(existing: LectureRecord, settings: SomaSettings) 
         return False
 
     last_seen_at = existing.last_seen_at
+    # PostgreSQL timestamp가 naive datetime으로 들어와도 UTC 기준으로 비교한다.
     if last_seen_at.tzinfo is None:
         last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
 

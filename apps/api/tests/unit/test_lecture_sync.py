@@ -1,3 +1,5 @@
+"""lecture sync의 외부 요청 없는 순수 로직을 고정하는 단위 테스트."""
+
 from datetime import datetime, timedelta, timezone
 
 from bs4 import BeautifulSoup
@@ -19,6 +21,7 @@ from apps.api.lecture_sync import (
 
 
 def test_parse_lecture_list_extracts_rows_with_optional_author_columns() -> None:
+    # SOMA 목록 row는 작성자/등록일 컬럼이 있을 수도 없을 수도 있어 두 케이스를 함께 검증한다.
     html = """
     <table>
       <tbody>
@@ -51,6 +54,7 @@ def test_parse_lecture_list_extracts_rows_with_optional_author_columns() -> None
 
 
 def test_parse_lecture_list_ignores_tables_without_lecture_links() -> None:
+    # 상세 링크가 없는 table은 특강 목록 table로 오인하지 않아야 한다.
     html = """
     <table><tbody><tr><td>empty</td></tr></tbody></table>
     """
@@ -59,12 +63,14 @@ def test_parse_lecture_list_ignores_tables_without_lecture_links() -> None:
 
 
 def test_extract_source_id_supports_known_query_names() -> None:
+    # 현재 URL 파라미터(qustnrSn)와 대체 파라미터(mentoLecSn)를 모두 source_id로 인정한다.
     assert extract_source_id("https://example.com/view.do?qustnrSn=10268") == "10268"
     assert extract_source_id("https://example.com/view.do?mentoLecSn=77") == "77"
     assert extract_source_id("https://example.com/view.do?id=1") == ""
 
 
 def test_with_page_index_preserves_existing_query_values() -> None:
+    # 검색 필터 query는 유지하고 pageIndex만 교체해야 목록 페이지 순회가 깨지지 않는다.
     url = "https://example.com/list.do?menuNo=200046&pageIndex=3&searchStatMentolec=A"
 
     assert _with_page_index(url, 9) == (
@@ -73,10 +79,12 @@ def test_with_page_index_preserves_existing_query_values() -> None:
 
 
 def test_with_page_index_adds_query_when_missing() -> None:
+    # pageIndex가 없는 기본 URL도 첫 페이지 이후 요청에 사용할 수 있어야 한다.
     assert _with_page_index("https://example.com/list.do", 2) == "https://example.com/list.do?pageIndex=2"
 
 
 def test_content_hash_and_embedding_update_detection() -> None:
+    # 제목/설명 조합이 같으면 embedding 재생성을 피하고, 내용이 바뀌면 재생성 대상으로 본다.
     first_hash = make_content_hash("title", "description")
     same_hash = make_content_hash("title", "description")
     changed_hash = make_content_hash("title", "changed")
@@ -88,14 +96,17 @@ def test_content_hash_and_embedding_update_detection() -> None:
 
 
 def test_format_pgvector_returns_pgvector_literal() -> None:
+    # repository는 list[float]를 pgvector literal로 cast해서 UPDATE한다.
     assert _format_pgvector([0.1, -2.5, 3.0]) == "[0.1,-2.5,3.0]"
 
 
 def test_clean_text_normalizes_spaces_and_nbsp() -> None:
+    # HTML에서 섞여 들어오는 NBSP, 줄바꿈, 탭은 content_hash 전에 동일한 공백으로 정규화한다.
     assert _clean_text("  hello\xa0\n world\t ") == "hello world"
 
 
 def test_extract_login_payload_keeps_only_hidden_inputs() -> None:
+    # 로그인 payload는 SOMA form의 hidden 값만 보존하고 사용자 입력 필드는 설정값으로 채운다.
     soup = BeautifulSoup(
         """
         <form>
@@ -112,6 +123,7 @@ def test_extract_login_payload_keeps_only_hidden_inputs() -> None:
 
 
 def test_validate_lecture_detail_fields_rejects_empty_title() -> None:
+    # 빈 제목은 NOT NULL 제약을 통과하는 가비지 row가 될 수 있어 저장 전에 실패시킨다.
     try:
         _validate_lecture_detail_fields("10268", "", "description")
     except RuntimeError as error:
@@ -122,6 +134,7 @@ def test_validate_lecture_detail_fields_rejects_empty_title() -> None:
 
 
 def test_validate_lecture_detail_fields_rejects_empty_description() -> None:
+    # 빈 설명은 의미 없는 embedding을 만들기 때문에 API 호출 전에 실패시킨다.
     try:
         _validate_lecture_detail_fields("10268", "title", "")
     except RuntimeError as error:
@@ -132,6 +145,7 @@ def test_validate_lecture_detail_fields_rejects_empty_description() -> None:
 
 
 def test_should_skip_detail_refresh_when_seen_recently() -> None:
+    # refresh interval 안에 이미 본 기존 row는 상세 페이지와 embedding 호출을 건너뛸 수 있다.
     record = LectureRecord(
         source_id="10268",
         title="title",
@@ -153,6 +167,7 @@ def test_should_skip_detail_refresh_when_seen_recently() -> None:
 
 
 def test_should_not_skip_detail_refresh_without_interval_or_seen_at() -> None:
+    # interval 설정이 없거나 last_seen_at이 없으면 정확성을 위해 상세 페이지를 다시 확인한다.
     record = LectureRecord(
         source_id="10268",
         title="title",
