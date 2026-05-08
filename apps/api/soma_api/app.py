@@ -12,6 +12,7 @@ from soma_api.errors import (
     validation_error_handler,
 )
 from soma_api.routes.health import router as health_router
+from soma_api.routes.recommendations import router as recommendations_router
 
 
 def create_app() -> FastAPI:
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.include_router(health_router)
+    app.include_router(recommendations_router)
 
     return app
 
