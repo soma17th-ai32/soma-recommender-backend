@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
 
@@ -18,5 +18,5 @@ async def create_recommendations(
     return service.recommend(
         payload,
         request.state.request_id,
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
     )

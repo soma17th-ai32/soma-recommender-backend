@@ -179,7 +179,10 @@ def test_invalid_limit_returns_422_invalid_request_schema() -> None:
 
     response = client.post(
         "/v1/recommendations",
-        json={"histories": [{"url": "https://example.com/history", "title": "FastAPI"}], "limit": 0},
+        json={
+            "histories": [{"url": "https://example.com/history", "title": "FastAPI"}],
+            "limit": 0,
+        },
     )
 
     assert response.status_code == 422

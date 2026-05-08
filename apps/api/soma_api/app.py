@@ -1,9 +1,10 @@
+from typing import cast
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import ExceptionHandler
 
 from soma_api.errors import (
     ApiError,
@@ -23,9 +24,15 @@ def create_app() -> FastAPI:
         request.state.request_id = f"req_{uuid4().hex}"
         return await call_next(request)
 
-    app.add_exception_handler(ApiError, api_error_handler)
-    app.add_exception_handler(RequestValidationError, validation_error_handler)
-    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(ApiError, cast(ExceptionHandler, api_error_handler))
+    app.add_exception_handler(
+        RequestValidationError,
+        cast(ExceptionHandler, validation_error_handler),
+    )
+    app.add_exception_handler(
+        StarletteHTTPException,
+        cast(ExceptionHandler, http_exception_handler),
+    )
     app.include_router(health_router)
     app.include_router(recommendations_router)
 

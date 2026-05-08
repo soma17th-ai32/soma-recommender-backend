@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from threading import RLock
 
 from pydantic import BaseModel
@@ -25,7 +25,7 @@ class InMemoryTTLHistoryStore:
         histories: list[NormalizedHistory],
         now: datetime | None = None,
     ) -> StoredHistoryRequest:
-        created_at = now or datetime.now(timezone.utc)
+        created_at = now or datetime.now(UTC)
         stored = StoredHistoryRequest(
             request_id=request_id,
             histories=histories,
@@ -39,7 +39,7 @@ class InMemoryTTLHistoryStore:
     def get(
         self, request_id: str, now: datetime | None = None
     ) -> StoredHistoryRequest | None:
-        checked_at = now or datetime.now(timezone.utc)
+        checked_at = now or datetime.now(UTC)
         with self._lock:
             stored = self._items.get(request_id)
             if stored is None:
@@ -50,7 +50,7 @@ class InMemoryTTLHistoryStore:
             return stored
 
     def cleanup(self, now: datetime | None = None) -> int:
-        checked_at = now or datetime.now(timezone.utc)
+        checked_at = now or datetime.now(UTC)
         with self._lock:
             expired_request_ids = [
                 request_id

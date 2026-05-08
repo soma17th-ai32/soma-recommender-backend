@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from soma_api.adapters.agent import RecommendationAgentAdapter
 from soma_api.errors import ApiError
@@ -30,7 +30,7 @@ class RecommendationService:
         request_id: str,
         received_at: datetime | None = None,
     ) -> RecommendationResponse:
-        now = received_at or datetime.now(timezone.utc)
+        now = received_at or datetime.now(UTC)
         histories = self._normalize_histories(request.histories, now)
         self._history_store.save(request_id, histories, now)
 

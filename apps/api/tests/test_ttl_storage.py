@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from soma_api.models import NormalizedHistory
 from soma_api.storage.ttl import InMemoryTTLHistoryStore
@@ -10,13 +10,13 @@ def make_history(url: str = "https://example.com/history") -> NormalizedHistory:
         title="FastAPI",
         body=None,
         mentor="Mentor",
-        taken_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        taken_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 
 def test_save_and_get_returns_stored_request() -> None:
     store = InMemoryTTLHistoryStore(ttl=timedelta(days=7))
-    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, tzinfo=UTC)
     history = make_history()
 
     stored = store.save("req_1", [history], now)
@@ -27,7 +27,7 @@ def test_save_and_get_returns_stored_request() -> None:
 
 def test_get_removes_expired_request() -> None:
     store = InMemoryTTLHistoryStore(ttl=timedelta(seconds=1))
-    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, tzinfo=UTC)
     store.save("req_1", [make_history()], now)
 
     assert store.get("req_1", now + timedelta(seconds=1)) is None
@@ -36,7 +36,7 @@ def test_get_removes_expired_request() -> None:
 
 def test_cleanup_removes_only_expired_requests() -> None:
     store = InMemoryTTLHistoryStore(ttl=timedelta(seconds=10))
-    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, tzinfo=UTC)
     store.save("req_expired", [make_history("https://example.com/old")], now)
     store.save(
         "req_fresh",
@@ -53,12 +53,17 @@ def test_cleanup_removes_only_expired_requests() -> None:
 
 def test_requests_are_isolated_by_request_id() -> None:
     store = InMemoryTTLHistoryStore()
-    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, tzinfo=UTC)
     first = make_history("https://example.com/first")
     second = make_history("https://example.com/second")
 
     store.save("req_1", [first], now)
     store.save("req_2", [second], now)
 
-    assert store.get("req_1", now).histories == [first]
-    assert store.get("req_2", now).histories == [second]
+    stored_first = store.get("req_1", now)
+    stored_second = store.get("req_2", now)
+
+    assert stored_first is not None
+    assert stored_second is not None
+    assert stored_first.histories == [first]
+    assert stored_second.histories == [second]

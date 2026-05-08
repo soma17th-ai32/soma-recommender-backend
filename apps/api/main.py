@@ -1,1 +1,1 @@
-from soma_api.app import app
+from soma_api.app import app as app
