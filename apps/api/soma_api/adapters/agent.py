@@ -27,7 +27,7 @@ class StubRecommendationAgentAdapter:
         if not topics:
             topics = [history.body[:40] for history in histories if history.body]
         interest_summary = "Interested in " + ", ".join(topics[:3])
-
+        # TODO: Use actual agent implementation after packages are fully functional
         items = [
             RecommendationItem(
                 mentoring_id=f"stub-{index + 1}",
