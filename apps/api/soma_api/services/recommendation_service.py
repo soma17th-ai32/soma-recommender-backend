@@ -32,6 +32,7 @@ class RecommendationService:
     ) -> RecommendationResponse:
         now = received_at or datetime.now(UTC)
         histories = self._normalize_histories(request.histories, now)
+        self._history_store.cleanup(now)
         self._history_store.save(request_id, histories, now)
 
         result = self._agent_adapter.recommend(histories, request.limit, request_id)
@@ -62,6 +63,13 @@ class RecommendationService:
             body = self._trim_or_none(history.body)
             mentor = self._trim_or_none(history.mentor)
             url = history.url.strip()
+
+            if not url:
+                raise ApiError(
+                    INVALID_HISTORY_PAYLOAD,
+                    f"histories[{index}].url must not be empty",
+                    400,
+                )
 
             if not title and not body:
                 raise ApiError(
