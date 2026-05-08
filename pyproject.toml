@@ -9,3 +9,22 @@ members = [
     "packages/agent",
     "packages/shared"
 ]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.409",
+    "ruff>=0.15.12",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["apps/api", "packages/agent", "packages/shared"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pyright]
+include = ["apps/api", "packages/agent", "packages/shared"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
