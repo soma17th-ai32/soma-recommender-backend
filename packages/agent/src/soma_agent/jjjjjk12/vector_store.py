@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import psycopg
 from psycopg.rows import tuple_row
+from typing import LiteralString
 
 from soma_agent.jjjjjk12.errors import VectorSearchError
 from soma_agent.jjjjjk12.schemas import LectureCandidate
@@ -42,7 +43,7 @@ class PgvectorLectureSearchClient:
                 return rows_to_candidates(cur.fetchall())
 
 
-def build_search_sql() -> str:
+def build_search_sql() -> LiteralString:
     """활성 특강 embedding 유사도 검색 SQL을 만든다."""
 
     return """

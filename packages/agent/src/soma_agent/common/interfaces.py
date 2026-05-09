@@ -12,3 +12,4 @@ class RecommendationAgent(Protocol):
 
     def recommend(self, request: RecommendationRequest) -> RecommendationResult:
         """요청에 대한 추천 결과를 반환한다."""
+        ...

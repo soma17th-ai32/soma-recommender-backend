@@ -192,7 +192,8 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
 
     _check_login_available(session, settings, payload)
 
-    action = form.get("action")
+    action_raw = form.get("action")
+    action = action_raw if isinstance(action_raw, str) else ""
     if not action:
         raise RuntimeError("SOMA login form action was not found.")
     action_url = urljoin(settings.base_url, action)
@@ -354,7 +355,8 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
         if title_anchor is None:
             continue
 
-        detail_url = urljoin(base_url, title_anchor.get("href", ""))
+        href = title_anchor.get("href")
+        detail_url = urljoin(base_url, href if isinstance(href, str) else "")
         source_id = extract_source_id(detail_url)
         if not source_id:
             continue
@@ -474,7 +476,10 @@ def _extract_detail_source_id(soup: BeautifulSoup) -> str:
     input_tag = soup.select_one("form#board input[name='qustnrSn']")
     if input_tag is None:
         input_tag = soup.select_one("input[name='qustnrSn']")
-    return _clean_text(input_tag.get("value", "")) if input_tag is not None else ""
+    if input_tag is None:
+        return ""
+    value = input_tag.get("value", "")
+    return _clean_text(value if isinstance(value, str) else "")
 
 
 def _extract_detail_value(soup: BeautifulSoup, label: str) -> str:
@@ -505,16 +510,19 @@ def _submit_auto_forms(
         if form is None:
             return current
 
-        action = form.get("action")
+        action_raw = form.get("action")
+        action = action_raw if isinstance(action_raw, str) else ""
         hidden_inputs = form.select("input[type='hidden'][name]")
         if not action or not hidden_inputs:
             return current
 
-        payload = {
-            input_tag.get("name"): input_tag.get("value", "")
-            for input_tag in hidden_inputs
-            if input_tag.get("name")
-        }
+        payload: dict[str, str] = {}
+        for input_tag in hidden_inputs:
+            name = input_tag.get("name")
+            if not isinstance(name, str) or not name:
+                continue
+            value = input_tag.get("value", "")
+            payload[name] = value if isinstance(value, str) else ""
         if not payload:
             return current
 
@@ -551,13 +559,16 @@ def _extract_login_payload(form) -> dict[str, str]:
 
     payload: dict[str, str] = {}
     for input_tag in form.select("input[name]"):
-        name = input_tag.get("name", "").strip()
+        name_raw = input_tag.get("name", "")
+        name = name_raw.strip() if isinstance(name_raw, str) else ""
         if not name:
             continue
-        input_type = (input_tag.get("type") or "text").lower()
+        input_type_raw = input_tag.get("type") or "text"
+        input_type = input_type_raw.lower() if isinstance(input_type_raw, str) else "text"
         if input_type != "hidden":
             continue
-        payload[name] = input_tag.get("value", "")
+        value = input_tag.get("value", "")
+        payload[name] = value if isinstance(value, str) else ""
     return payload
 
 

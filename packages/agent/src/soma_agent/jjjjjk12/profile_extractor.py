@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from openai import OpenAI
 from openai import OpenAIError
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError
@@ -77,7 +78,7 @@ class LlmProfileExtractor:
         except (OpenAIError, IndexError, AttributeError) as error:
             raise ProfileExtractionError("LLM 관심사 추출에 실패했습니다.") from error
 
-    def _build_messages(self, histories: list[History]) -> list[dict[str, str]]:
+    def _build_messages(self, histories: list[History]) -> list[ChatCompletionMessageParam]:
         """설정된 길이 제한을 적용해 LLM 메시지를 만든다."""
 
         return build_profile_messages(
@@ -112,7 +113,7 @@ def build_profile_messages(
     histories: list[History],
     title_max_chars: int = 120,
     body_max_chars: int = 800,
-) -> list[dict[str, str]]:
+) -> list[ChatCompletionMessageParam]:
     """LLM chat completion 요청 메시지를 만든다."""
 
     return [

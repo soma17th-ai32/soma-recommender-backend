@@ -33,7 +33,8 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
         if title_anchor is None:
             continue
 
-        detail_url = urljoin(base_url, title_anchor.get("href", ""))
+        href = title_anchor.get("href")
+        detail_url = urljoin(base_url, href if isinstance(href, str) else "")
         # DB unique 기준이 되는 source_id가 없는 row는 동기화 대상에서 제외한다.
         source_id = extract_source_id(detail_url)
         if not source_id:

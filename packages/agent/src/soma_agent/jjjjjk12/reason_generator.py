@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from openai import OpenAI
 from openai import OpenAIError
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel
 from pydantic import ValidationError
 
@@ -78,7 +79,7 @@ class FallbackReasonGenerator:
 def build_reason_messages(
     scored_candidate: ScoredCandidate,
     profile: InterestProfile,
-) -> list[dict[str, str]]:
+) -> list[ChatCompletionMessageParam]:
     """LLM chat completion 요청 메시지를 만든다."""
 
     return [
