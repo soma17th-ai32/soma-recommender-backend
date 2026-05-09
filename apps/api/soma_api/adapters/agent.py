@@ -1,10 +1,31 @@
 from typing import Protocol
 
+from soma_agent.common.errors import SomaAgentError
+from soma_agent.common.interfaces import RecommendationAgent
+from soma_agent.common.schemas import History
+from soma_agent.common.schemas import RecommendationRequest
+from soma_agent.jjjjjk12.errors import EmbeddingProviderError
+from soma_agent.jjjjjk12.errors import EmptyHistoryError
+from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
+from soma_agent.jjjjjk12.errors import ProfileExtractionError
+from soma_agent.jjjjjk12.errors import ReasonGenerationError
+from soma_agent.jjjjjk12.errors import VectorSearchError
+from soma_agent.jjjjjk12.factory import create_jjjjjk12_workflow
+
+from soma_api.errors import ApiError
 from soma_api.models import (
     AgentRecommendationResult,
     NormalizedHistory,
     RecommendationItem,
 )
+
+EMPTY_HISTORY = "EMPTY_HISTORY"
+EMBEDDING_PROVIDER_FAILED = "EMBEDDING_PROVIDER_FAILED"
+NO_RECOMMENDATION_FOUND = "NO_RECOMMENDATION_FOUND"
+PROFILE_EXTRACTION_FAILED = "PROFILE_EXTRACTION_FAILED"
+REASON_GENERATION_FAILED = "REASON_GENERATION_FAILED"
+RECOMMENDATION_AGENT_FAILED = "RECOMMENDATION_AGENT_FAILED"
+VECTOR_SEARCH_FAILED = "VECTOR_SEARCH_FAILED"
 
 
 class RecommendationAgentAdapter(Protocol):
@@ -14,6 +35,90 @@ class RecommendationAgentAdapter(Protocol):
         limit: int,
         request_id: str,
     ) -> AgentRecommendationResult: ...
+
+
+class Jjjjjk12RecommendationAgentAdapter:
+    def __init__(self, workflow: RecommendationAgent | None = None) -> None:
+        self._workflow = workflow or create_jjjjjk12_workflow()
+
+    def recommend(
+        self,
+        histories: list[NormalizedHistory],
+        limit: int,
+        request_id: str,
+    ) -> AgentRecommendationResult:
+        del request_id
+
+        request = RecommendationRequest(
+            histories=[
+                History(
+                    url=history.url,
+                    title=history.title,
+                    body=history.body,
+                    mentor=history.mentor,
+                    taken_at=history.taken_at.isoformat(),
+                )
+                for history in histories
+            ],
+            limit=limit,
+        )
+
+        try:
+            result = self._workflow.recommend(request)
+        except EmptyHistoryError as error:
+            raise ApiError(EMPTY_HISTORY, "histories must not be empty", 400) from error
+        except NoRecommendationFoundError as error:
+            raise ApiError(
+                NO_RECOMMENDATION_FOUND,
+                "No recommendation candidates were found",
+                400,
+            ) from error
+        except ProfileExtractionError as error:
+            raise ApiError(
+                PROFILE_EXTRACTION_FAILED,
+                "Failed to extract recommendation profile",
+                502,
+            ) from error
+        except ReasonGenerationError as error:
+            raise ApiError(
+                REASON_GENERATION_FAILED,
+                "Failed to generate recommendation reasons",
+                502,
+            ) from error
+        except EmbeddingProviderError as error:
+            raise ApiError(
+                EMBEDDING_PROVIDER_FAILED,
+                "Failed to generate recommendation embedding",
+                502,
+            ) from error
+        except VectorSearchError as error:
+            raise ApiError(
+                VECTOR_SEARCH_FAILED,
+                "Failed to search recommendation candidates",
+                503,
+            ) from error
+        except SomaAgentError as error:
+            raise ApiError(
+                RECOMMENDATION_AGENT_FAILED,
+                "Recommendation agent failed",
+                500,
+            ) from error
+
+        return AgentRecommendationResult(
+            interest_summary=result.interest_summary,
+            items=[
+                RecommendationItem(
+                    mentoring_id=item.mentoring_id,
+                    title=item.title,
+                    summary=item.summary,
+                    url=item.url,
+                    mentor=None,
+                    score=item.score,
+                    reason=item.reason,
+                )
+                for item in result.items
+            ],
+        )
 
 
 class StubRecommendationAgentAdapter:
