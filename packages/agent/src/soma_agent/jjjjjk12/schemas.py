@@ -4,11 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from soma_agent.common.schemas import History
-from soma_agent.common.schemas import RecommendationItem
-from soma_agent.common.schemas import RecommendationRequest
-from soma_agent.common.schemas import RecommendationResult
-
 
 @dataclass(frozen=True)
 class InterestProfile:
