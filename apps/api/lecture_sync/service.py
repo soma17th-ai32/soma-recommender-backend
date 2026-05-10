@@ -1,20 +1,19 @@
 """SOMA 특강 수집 결과를 DB 상태와 임베딩 상태로 동기화하는 서비스 계층."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import psycopg
 
-from apps.api.lecture_sync.crawler import (
+from lecture_sync.crawler import (
     create_soma_session,
     fetch_available_lecture_list,
     fetch_lecture_data,
     is_session_alive,
     login_soma_site,
 )
-from apps.api.lecture_sync.models import LectureListItem, SomaSettings, SyncLectureResult
-from apps.api.lecture_sync.models import LectureRecord
-from apps.api.lecture_sync.parser import needs_embedding_update
-from apps.api.lecture_sync.repository import (
+from lecture_sync.models import LectureListItem, LectureRecord, SomaSettings, SyncLectureResult
+from lecture_sync.parser import needs_embedding_update
+from lecture_sync.repository import (
     get_existing_lectures,
     insert_lecture,
     mark_lecture_active,
@@ -24,8 +23,7 @@ from apps.api.lecture_sync.repository import (
     update_lecture_list_metadata,
     update_lecture_seen,
 )
-from apps.api.lecture_sync.settings import load_soma_settings
-from apps.api.lecture_sync.settings import load_database_url
+from lecture_sync.settings import load_database_url, load_soma_settings
 
 
 def sync_lecture() -> SyncLectureResult:
@@ -78,7 +76,7 @@ def refresh_lecture_status(
             mark_lecture_active(conn, lecture.source_id)
             activated_count += 1
 
-        # 비용 절감 옵션이 켜진 경우, 최근 확인한 기존 row는 상세 페이지와 embedding 호출을 건너뛴다.
+        # 비용 절감 옵션이 켜진 경우, 최근 확인한 기존 row는 상세 호출을 건너뛴다.
         if existing is not None and should_skip_detail_refresh(existing, settings):
             update_lecture_list_metadata(conn, lecture)
             continue
@@ -124,7 +122,7 @@ def should_skip_detail_refresh(existing: LectureRecord, settings: SomaSettings) 
     last_seen_at = existing.last_seen_at
     # PostgreSQL timestamp가 naive datetime으로 들어와도 UTC 기준으로 비교한다.
     if last_seen_at.tzinfo is None:
-        last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
+        last_seen_at = last_seen_at.replace(tzinfo=UTC)
 
-    elapsed_seconds = (datetime.now(timezone.utc) - last_seen_at).total_seconds()
+    elapsed_seconds = (datetime.now(UTC) - last_seen_at).total_seconds()
     return elapsed_seconds < interval_seconds

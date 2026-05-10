@@ -1,15 +1,15 @@
 import argparse
 
-from apps.api.lecture_sync.crawler import (
+from lecture_sync.crawler import (
     create_soma_session,
     fetch_available_lecture_list,
     fetch_lecture_detail,
     is_session_alive,
     login_soma_site,
 )
-from apps.api.lecture_sync.embedding import embed_lecture_detail
-from apps.api.lecture_sync.service import sync_lecture
-from apps.api.lecture_sync.settings import load_soma_settings, load_upstage_settings
+from lecture_sync.embedding import embed_lecture_detail
+from lecture_sync.service import sync_lecture
+from lecture_sync.settings import load_soma_settings, load_upstage_settings
 
 
 def print_live_lecture_preview(limit: int = 10) -> None:
@@ -98,8 +98,16 @@ def main() -> None:
     """로컬 확인용 CLI 진입점."""
 
     parser = argparse.ArgumentParser(description="SOMA lecture crawler utilities")
-    parser.add_argument("--embed", action="store_true", help="also create an Upstage embedding for the first lecture")
-    parser.add_argument("--sync", action="store_true", help="sync available lectures into PostgreSQL")
+    parser.add_argument(
+        "--embed",
+        action="store_true",
+        help="also create an Upstage embedding for the first lecture",
+    )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="sync available lectures into PostgreSQL",
+    )
     args = parser.parse_args()
 
     if args.sync:

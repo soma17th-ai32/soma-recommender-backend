@@ -6,8 +6,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from apps.api.lecture_sync.models import LectureData, LectureDetail, LectureListItem, SomaSettings
-from apps.api.lecture_sync.parser import (
+from lecture_sync.models import LectureData, LectureDetail, LectureListItem, SomaSettings
+from lecture_sync.parser import (
     _clean_text,
     _with_page_index,
     extract_source_id,
@@ -49,7 +49,7 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
     _check_login_available(session, settings, payload)
 
     action = form.get("action")
-    if not action:
+    if not isinstance(action, str) or not action:
         raise RuntimeError("SOMA login form action was not found.")
     action_url = urljoin(settings.base_url, action)
     login_response = session.post(action_url, data=payload, timeout=settings.timeout_seconds)
@@ -66,7 +66,10 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
 def is_session_alive(session: requests.Session, settings: SomaSettings) -> bool:
     """현재 세션으로 특강 목록 페이지에 접근 가능한지 확인한다."""
 
-    response = session.get(_with_page_index(settings.lecture_list_url, 1), timeout=settings.timeout_seconds)
+    response = session.get(
+        _with_page_index(settings.lecture_list_url, 1),
+        timeout=settings.timeout_seconds,
+    )
     response.raise_for_status()
     return not _response_requires_login(response)
 
@@ -198,7 +201,10 @@ def _extract_detail_source_id(soup: BeautifulSoup) -> str:
     input_tag = soup.select_one("form#board input[name='qustnrSn']")
     if input_tag is None:
         input_tag = soup.select_one("input[name='qustnrSn']")
-    return _clean_text(input_tag.get("value", "")) if input_tag is not None else ""
+    if input_tag is None:
+        return ""
+    value = input_tag.get("value", "")
+    return _clean_text(value if isinstance(value, str) else "")
 
 
 def _extract_detail_value(soup: BeautifulSoup, label: str) -> str:
@@ -231,14 +237,16 @@ def _submit_auto_forms(
 
         action = form.get("action")
         hidden_inputs = form.select("input[type='hidden'][name]")
-        if not action or not hidden_inputs:
+        if not isinstance(action, str) or not action or not hidden_inputs:
             return current
 
-        payload = {
-            input_tag.get("name"): input_tag.get("value", "")
-            for input_tag in hidden_inputs
-            if input_tag.get("name")
-        }
+        payload: dict[str, str] = {}
+        for input_tag in hidden_inputs:
+            name = input_tag.get("name")
+            if not isinstance(name, str) or not name:
+                continue
+            value = input_tag.get("value", "")
+            payload[name] = value if isinstance(value, str) else ""
         if not payload:
             return current
 
@@ -276,13 +284,16 @@ def _extract_login_payload(form) -> dict[str, str]:
 
     payload: dict[str, str] = {}
     for input_tag in form.select("input[name]"):
-        name = input_tag.get("name", "").strip()
+        raw_name = input_tag.get("name", "")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
         if not name:
             continue
-        input_type = (input_tag.get("type") or "text").lower()
+        raw_input_type = input_tag.get("type") or "text"
+        input_type = raw_input_type.lower() if isinstance(raw_input_type, str) else "text"
         if input_type != "hidden":
             continue
-        payload[name] = input_tag.get("value", "")
+        value = input_tag.get("value", "")
+        payload[name] = value if isinstance(value, str) else ""
     return payload
 
 

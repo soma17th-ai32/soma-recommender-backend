@@ -1,5 +1,4 @@
-from apps.api.lecture_sync.cli import main
-
+from lecture_sync.cli import main
 
 if __name__ == "__main__":
     main()

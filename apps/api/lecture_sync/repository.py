@@ -1,8 +1,8 @@
 """lectures 테이블을 읽고 쓰는 PostgreSQL/pgvector repository."""
 
-from apps.api.lecture_sync.embedding import embed_text
-from apps.api.lecture_sync.models import LectureData, LectureListItem, LectureRecord
-from apps.api.lecture_sync.parser import build_embedding_text
+from lecture_sync.embedding import embed_text
+from lecture_sync.models import LectureData, LectureListItem, LectureRecord
+from lecture_sync.parser import build_embedding_text
 
 
 def get_existing_lectures(conn) -> list[LectureRecord]:
