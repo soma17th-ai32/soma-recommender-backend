@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from lecture_sync.service import sync_lecture
 from soma_api.adapters.agent import RecommendationAgentAdapter
 from soma_api.errors import ApiError
 from soma_api.models import (
@@ -30,6 +31,7 @@ class RecommendationService:
         request_id: str,
         received_at: datetime | None = None,
     ) -> RecommendationResponse:
+        sync_lecture()
         now = received_at or datetime.now(UTC)
         histories = self._normalize_histories(request.histories, now)
         self._history_store.cleanup(now)

@@ -1,0 +1,11 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": [
+    "apps",
+    "packages"
+  ],
+  "extraPaths": [
+    "packages/agent/src"
+  ]
+}
