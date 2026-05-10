@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from openai import OpenAI
-from openai import OpenAIError
+from openai import OpenAI, OpenAIError
 
 from soma_agent.jjjjjk12.errors import EmbeddingProviderError
-
 
 DEFAULT_UPSTAGE_BASE_URL = "https://api.upstage.ai/v1/solar"
 DEFAULT_UPSTAGE_EMBEDDING_MODEL = "solar-embedding-1-large-query"

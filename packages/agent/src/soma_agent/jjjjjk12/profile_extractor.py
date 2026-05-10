@@ -2,19 +2,14 @@
 
 from __future__ import annotations
 
-from openai import OpenAI
-from openai import OpenAIError
+from openai import OpenAI, OpenAIError
 from openai.types.chat import ChatCompletionMessageParam
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from soma_agent.common.schemas import History
 from soma_agent.jjjjjk12.errors import ProfileExtractionError
-from soma_agent.jjjjjk12.prompts import PROFILE_SYSTEM_PROMPT
-from soma_agent.jjjjjk12.prompts import build_profile_user_prompt
+from soma_agent.jjjjjk12.prompts import PROFILE_SYSTEM_PROMPT, build_profile_user_prompt
 from soma_agent.jjjjjk12.schemas import InterestProfile
-
 
 KEYWORD_CANDIDATES = [
     "FastAPI",

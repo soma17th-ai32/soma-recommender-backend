@@ -1,10 +1,12 @@
 """lecture sync의 외부 요청 없는 순수 로직을 고정하는 단위 테스트."""
 
-from datetime import datetime, timedelta, timezone
+# ruff: noqa: E501
+
+from datetime import UTC, datetime, timedelta
 
 from bs4 import BeautifulSoup
 
-from apps.api.lecture_sync import (
+from lecture_sync import (
     LectureRecord,
     SomaSettings,
     _clean_text,
@@ -146,7 +148,7 @@ def test_should_skip_detail_refresh_when_seen_recently() -> None:
         description="description",
         status="active",
         content_hash="hash",
-        last_seen_at=datetime.now(timezone.utc) - timedelta(seconds=30),
+        last_seen_at=datetime.now(UTC) - timedelta(seconds=30),
     )
     settings = SomaSettings(
         base_url="https://example.com",

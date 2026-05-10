@@ -4,7 +4,7 @@ import os
 
 from dotenv import load_dotenv
 
-from apps.api.lecture_sync.models import SomaSettings, UpstageSettings
+from lecture_sync.models import SomaSettings, UpstageSettings
 
 
 def load_soma_settings() -> SomaSettings:

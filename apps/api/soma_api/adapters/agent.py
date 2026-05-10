@@ -2,14 +2,15 @@ from typing import Protocol
 
 from soma_agent.common.errors import SomaAgentError
 from soma_agent.common.interfaces import RecommendationAgent
-from soma_agent.common.schemas import History
-from soma_agent.common.schemas import RecommendationRequest
-from soma_agent.jjjjjk12.errors import EmbeddingProviderError
-from soma_agent.jjjjjk12.errors import EmptyHistoryError
-from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
-from soma_agent.jjjjjk12.errors import ProfileExtractionError
-from soma_agent.jjjjjk12.errors import ReasonGenerationError
-from soma_agent.jjjjjk12.errors import VectorSearchError
+from soma_agent.common.schemas import History, RecommendationRequest
+from soma_agent.jjjjjk12.errors import (
+    EmbeddingProviderError,
+    EmptyHistoryError,
+    NoRecommendationFoundError,
+    ProfileExtractionError,
+    ReasonGenerationError,
+    VectorSearchError,
+)
 from soma_agent.jjjjjk12.factory import create_jjjjjk12_workflow
 
 from soma_api.errors import ApiError

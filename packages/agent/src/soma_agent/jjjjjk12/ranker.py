@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
-from soma_agent.jjjjjk12.schemas import LectureCandidate
-from soma_agent.jjjjjk12.schemas import ScoredCandidate
+from soma_agent.jjjjjk12.schemas import LectureCandidate, ScoredCandidate
 
 
 def rank_candidates(

@@ -1,18 +1,21 @@
 from datetime import UTC, datetime
 
 import pytest
-
 from soma_agent.common.schemas import RecommendationItem as AgentRecommendationItem
 from soma_agent.common.schemas import RecommendationRequest as AgentRecommendationRequest
 from soma_agent.common.schemas import RecommendationResult as AgentRecommendationResult
-from soma_agent.jjjjjk12.errors import EmbeddingProviderError
-from soma_agent.jjjjjk12.errors import NoRecommendationFoundError
-from soma_agent.jjjjjk12.errors import VectorSearchError
+from soma_agent.jjjjjk12.errors import (
+    EmbeddingProviderError,
+    NoRecommendationFoundError,
+    VectorSearchError,
+)
 
-from soma_api.adapters.agent import EMBEDDING_PROVIDER_FAILED
-from soma_api.adapters.agent import Jjjjjk12RecommendationAgentAdapter
-from soma_api.adapters.agent import NO_RECOMMENDATION_FOUND
-from soma_api.adapters.agent import VECTOR_SEARCH_FAILED
+from soma_api.adapters.agent import (
+    EMBEDDING_PROVIDER_FAILED,
+    NO_RECOMMENDATION_FOUND,
+    VECTOR_SEARCH_FAILED,
+    Jjjjjk12RecommendationAgentAdapter,
+)
 from soma_api.errors import ApiError
 from soma_api.models import NormalizedHistory
 

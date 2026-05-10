@@ -7,8 +7,7 @@ from openai import OpenAI
 from soma_agent.jjjjjk12.embedding import UpstageEmbeddingClient
 from soma_agent.jjjjjk12.profile_extractor import LlmProfileExtractor
 from soma_agent.jjjjjk12.reason_generator import LlmReasonGenerator
-from soma_agent.jjjjjk12.settings import Jjjjjk12AgentSettings
-from soma_agent.jjjjjk12.settings import load_jjjjjk12_settings
+from soma_agent.jjjjjk12.settings import Jjjjjk12AgentSettings, load_jjjjjk12_settings
 from soma_agent.jjjjjk12.vector_store import PgvectorLectureSearchClient
 from soma_agent.jjjjjk12.workflow import Jjjjjk12RecommendationWorkflow
 

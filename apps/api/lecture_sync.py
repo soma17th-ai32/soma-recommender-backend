@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from hashlib import sha256
 import os
 import time
+from dataclasses import dataclass
+from hashlib import sha256
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
 import requests
@@ -210,7 +210,10 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
 def is_session_alive(session: requests.Session, settings: SomaSettings) -> bool:
     """현재 세션으로 특강 목록 페이지에 접근 가능한지 확인한다."""
 
-    response = session.get(_with_page_index(settings.lecture_list_url, 1), timeout=settings.timeout_seconds)
+    response = session.get(
+        _with_page_index(settings.lecture_list_url, 1),
+        timeout=settings.timeout_seconds,
+    )
     response.raise_for_status()
     return not _response_requires_login(response)
 
@@ -366,11 +369,17 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
                 source_id=source_id,
                 title=_clean_text(title_anchor.get_text(" ", strip=True)),
                 detail_url=detail_url,
-                receipt_period=_clean_text(cols[2].get_text(" ", strip=True)) if len(cols) > 2 else None,
-                event_date=_clean_text(cols[3].get_text(" ", strip=True)) if len(cols) > 3 else None,
+                receipt_period=(
+                    _clean_text(cols[2].get_text(" ", strip=True)) if len(cols) > 2 else None
+                ),
+                event_date=(
+                    _clean_text(cols[3].get_text(" ", strip=True)) if len(cols) > 3 else None
+                ),
                 status=_clean_text(cols[6].get_text(" ", strip=True)) if len(cols) > 6 else None,
                 author=_clean_text(cols[7].get_text(" ", strip=True)) if len(cols) > 7 else None,
-                registered_at=_clean_text(cols[8].get_text(" ", strip=True)) if len(cols) > 8 else None,
+                registered_at=(
+                    _clean_text(cols[8].get_text(" ", strip=True)) if len(cols) > 8 else None
+                ),
             )
         )
 

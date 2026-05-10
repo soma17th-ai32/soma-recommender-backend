@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from soma_agent.common.schemas import History
-from soma_agent.common.schemas import RecommendationItem
-from soma_agent.common.schemas import RecommendationRequest
-from soma_agent.common.schemas import RecommendationResult
+from soma_agent.common.schemas import (
+    History,
+    RecommendationItem,
+    RecommendationRequest,
+    RecommendationResult,
+)
 from soma_agent.jjjjjk12.history_preprocessor import prepare_histories
 from soma_agent.jjjjjk12.query_builder import build_query_text
 from soma_agent.jjjjjk12.ranker import rank_candidates
 from soma_agent.jjjjjk12.rules import filter_recommendable_candidates
-from soma_agent.jjjjjk12.schemas import InterestProfile
-from soma_agent.jjjjjk12.schemas import LectureCandidate
-from soma_agent.jjjjjk12.schemas import ScoredCandidate
+from soma_agent.jjjjjk12.schemas import InterestProfile, LectureCandidate, ScoredCandidate
 
 
 class Jjjjjk12RecommendationWorkflow:

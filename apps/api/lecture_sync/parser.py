@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
 from bs4 import BeautifulSoup
 
-from apps.api.lecture_sync.models import LectureListItem
+from lecture_sync.models import LectureListItem
 
 
 def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
@@ -33,7 +33,7 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
         if title_anchor is None:
             continue
 
-        href = title_anchor.get("href")
+        href = title_anchor.get("href", "")
         detail_url = urljoin(base_url, href if isinstance(href, str) else "")
         # DB unique 기준이 되는 source_id가 없는 row는 동기화 대상에서 제외한다.
         source_id = extract_source_id(detail_url)
@@ -45,11 +45,17 @@ def parse_lecture_list(html: str, base_url: str) -> list[LectureListItem]:
                 source_id=source_id,
                 title=_clean_text(title_anchor.get_text(" ", strip=True)),
                 detail_url=detail_url,
-                receipt_period=_clean_text(cols[2].get_text(" ", strip=True)) if len(cols) > 2 else None,
-                event_date=_clean_text(cols[3].get_text(" ", strip=True)) if len(cols) > 3 else None,
+                receipt_period=(
+                    _clean_text(cols[2].get_text(" ", strip=True)) if len(cols) > 2 else None
+                ),
+                event_date=(
+                    _clean_text(cols[3].get_text(" ", strip=True)) if len(cols) > 3 else None
+                ),
                 status=_clean_text(cols[6].get_text(" ", strip=True)) if len(cols) > 6 else None,
                 author=_clean_text(cols[7].get_text(" ", strip=True)) if len(cols) > 7 else None,
-                registered_at=_clean_text(cols[8].get_text(" ", strip=True)) if len(cols) > 8 else None,
+                registered_at=(
+                    _clean_text(cols[8].get_text(" ", strip=True)) if len(cols) > 8 else None
+                ),
             )
         )
 

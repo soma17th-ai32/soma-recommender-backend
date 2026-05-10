@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from openai import OpenAI
-from openai import OpenAIError
+from openai import OpenAI, OpenAIError
 from openai.types.chat import ChatCompletionMessageParam
-from pydantic import BaseModel
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from soma_agent.jjjjjk12.errors import ReasonGenerationError
-from soma_agent.jjjjjk12.prompts import REASON_SYSTEM_PROMPT
-from soma_agent.jjjjjk12.prompts import build_reason_user_prompt
-from soma_agent.jjjjjk12.schemas import InterestProfile
-from soma_agent.jjjjjk12.schemas import ScoredCandidate
+from soma_agent.jjjjjk12.prompts import REASON_SYSTEM_PROMPT, build_reason_user_prompt
+from soma_agent.jjjjjk12.schemas import InterestProfile, ScoredCandidate
 
 
 class ReasonGenerationResponse(BaseModel):

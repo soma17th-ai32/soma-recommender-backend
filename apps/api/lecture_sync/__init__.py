@@ -1,4 +1,4 @@
-from apps.api.lecture_sync.crawler import (
+from lecture_sync.crawler import (
     _check_login_available,
     _extract_detail_description,
     _extract_detail_source_id,
@@ -16,12 +16,12 @@ from apps.api.lecture_sync.crawler import (
     is_session_alive,
     login_soma_site,
 )
-from apps.api.lecture_sync.embedding import (
+from lecture_sync.embedding import (
     create_upstage_client,
     embed_lecture_detail,
     embed_text,
 )
-from apps.api.lecture_sync.models import (
+from lecture_sync.models import (
     LectureBase,
     LectureData,
     LectureDetail,
@@ -31,7 +31,7 @@ from apps.api.lecture_sync.models import (
     SyncLectureResult,
     UpstageSettings,
 )
-from apps.api.lecture_sync.parser import (
+from lecture_sync.parser import (
     _clean_text,
     _with_page_index,
     build_embedding_text,
@@ -40,7 +40,7 @@ from apps.api.lecture_sync.parser import (
     needs_embedding_update,
     parse_lecture_list,
 )
-from apps.api.lecture_sync.repository import (
+from lecture_sync.repository import (
     _format_pgvector,
     _lecture_params,
     get_existing_lectures,
@@ -52,8 +52,8 @@ from apps.api.lecture_sync.repository import (
     update_lecture_list_metadata,
     update_lecture_seen,
 )
-from apps.api.lecture_sync.service import should_skip_detail_refresh, sync_lecture
-from apps.api.lecture_sync.settings import (
+from lecture_sync.service import should_skip_detail_refresh, sync_lecture
+from lecture_sync.settings import (
     load_database_url,
     load_soma_settings,
     load_upstage_settings,

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import LiteralString
+
 import psycopg
 from psycopg.rows import tuple_row
-from typing import LiteralString
 
 from soma_agent.jjjjjk12.errors import VectorSearchError
 from soma_agent.jjjjjk12.schemas import LectureCandidate

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from soma_agent.common.schemas import History
-from soma_agent.jjjjjk12.schemas import InterestProfile
-from soma_agent.jjjjjk12.schemas import ScoredCandidate
-
+from soma_agent.jjjjjk12.schemas import InterestProfile, ScoredCandidate
 
 PROFILE_SYSTEM_PROMPT = """
 너는 수강 이력을 바탕으로 사용자의 관심사를 추출하는 추천 시스템 구성요소다.

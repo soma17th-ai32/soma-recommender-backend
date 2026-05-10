@@ -6,8 +6,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from apps.api.lecture_sync.models import LectureData, LectureDetail, LectureListItem, SomaSettings
-from apps.api.lecture_sync.parser import (
+from lecture_sync.models import LectureData, LectureDetail, LectureListItem, SomaSettings
+from lecture_sync.parser import (
     _clean_text,
     _with_page_index,
     extract_source_id,
@@ -48,9 +48,8 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
     # 로그인 페이지 JavaScript가 호출하는 계정 상태 확인 API를 동일하게 거친다.
     _check_login_available(session, settings, payload)
 
-    action_raw = form.get("action")
-    action = action_raw if isinstance(action_raw, str) else ""
-    if not action:
+    action = form.get("action")
+    if not isinstance(action, str) or not action:
         raise RuntimeError("SOMA login form action was not found.")
     action_url = urljoin(settings.base_url, action)
     login_response = session.post(action_url, data=payload, timeout=settings.timeout_seconds)
@@ -67,7 +66,10 @@ def login_soma_site(session: requests.Session, settings: SomaSettings) -> None:
 def is_session_alive(session: requests.Session, settings: SomaSettings) -> bool:
     """현재 세션으로 특강 목록 페이지에 접근 가능한지 확인한다."""
 
-    response = session.get(_with_page_index(settings.lecture_list_url, 1), timeout=settings.timeout_seconds)
+    response = session.get(
+        _with_page_index(settings.lecture_list_url, 1),
+        timeout=settings.timeout_seconds,
+    )
     response.raise_for_status()
     return not _response_requires_login(response)
 
@@ -236,7 +238,7 @@ def _submit_auto_forms(
         action_raw = form.get("action")
         action = action_raw if isinstance(action_raw, str) else ""
         hidden_inputs = form.select("input[type='hidden'][name]")
-        if not action or not hidden_inputs:
+        if not isinstance(action, str) or not action or not hidden_inputs:
             return current
 
         payload: dict[str, str] = {}
@@ -283,12 +285,12 @@ def _extract_login_payload(form) -> dict[str, str]:
 
     payload: dict[str, str] = {}
     for input_tag in form.select("input[name]"):
-        name_raw = input_tag.get("name", "")
-        name = name_raw.strip() if isinstance(name_raw, str) else ""
+        raw_name = input_tag.get("name", "")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
         if not name:
             continue
-        input_type_raw = input_tag.get("type") or "text"
-        input_type = input_type_raw.lower() if isinstance(input_type_raw, str) else "text"
+        raw_input_type = input_tag.get("type") or "text"
+        input_type = raw_input_type.lower() if isinstance(raw_input_type, str) else "text"
         if input_type != "hidden":
             continue
         value = input_tag.get("value", "")

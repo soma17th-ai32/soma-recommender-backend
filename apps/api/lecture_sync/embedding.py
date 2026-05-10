@@ -2,9 +2,9 @@
 
 from openai import OpenAI
 
-from apps.api.lecture_sync.models import LectureDetail
-from apps.api.lecture_sync.parser import build_embedding_text
-from apps.api.lecture_sync.settings import load_upstage_settings
+from lecture_sync.models import LectureDetail
+from lecture_sync.parser import build_embedding_text
+from lecture_sync.settings import load_upstage_settings
 
 
 def create_upstage_client(settings=None) -> OpenAI:
