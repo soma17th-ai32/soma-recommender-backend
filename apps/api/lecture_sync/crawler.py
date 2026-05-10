@@ -235,7 +235,8 @@ def _submit_auto_forms(
         if form is None:
             return current
 
-        action = form.get("action")
+        action_raw = form.get("action")
+        action = action_raw if isinstance(action_raw, str) else ""
         hidden_inputs = form.select("input[type='hidden'][name]")
         if not isinstance(action, str) or not action or not hidden_inputs:
             return current
