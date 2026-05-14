@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+from time import perf_counter
+
 from soma_agent.common.schemas import (
     History,
     RecommendationItem,
@@ -13,6 +16,9 @@ from soma_agent.jjjjjk12.query_builder import build_query_text
 from soma_agent.jjjjjk12.ranker import rank_candidates
 from soma_agent.jjjjjk12.rules import filter_recommendable_candidates
 from soma_agent.jjjjjk12.schemas import InterestProfile, LectureCandidate, ScoredCandidate
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class Jjjjjk12RecommendationWorkflow:
@@ -35,14 +41,67 @@ class Jjjjjk12RecommendationWorkflow:
     def recommend(self, request: RecommendationRequest) -> RecommendationResult:
         """추천 요청을 처리하고 최종 추천 결과를 반환한다."""
 
+        started_at = perf_counter()
+        logger.info(
+            "[AGENT 1/8] 추천 Agent workflow 시작 | histories=%s | limit=%s",
+            len(request.histories),
+            request.limit,
+        )
+        logger.info("[AGENT 2/8] 수강 이력 전처리 중...")
         histories = self._prepare_histories(request.histories)
+        logger.info(
+            "[AGENT 2/8] 수강 이력 전처리 완료 | prepared_histories=%s",
+            len(histories),
+        )
         profile_histories = self._select_profile_histories(histories)
+        logger.info(
+            "[AGENT 3/8] 관심사 추출 대상 이력 선택 완료 | selected_histories=%s | limit=%s",
+            len(profile_histories),
+            self.profile_history_limit,
+        )
+        logger.info("[AGENT 4/8] 관심사 프로필 추출 중...")
         profile = self.profile_extractor.extract(profile_histories)
+        logger.info(
+            "[AGENT 4/8] 관심사 프로필 추출 완료 | keywords=%s | summary=%s",
+            len(profile.keywords),
+            _preview_text(profile.summary),
+        )
+        logger.info("[AGENT 5/8] 검색용 임베딩 생성 중...")
         embedding = self._create_query_embedding(profile)
+        logger.info(
+            "[AGENT 5/8] 검색용 임베딩 생성 완료 | dimensions=%s",
+            len(embedding),
+        )
+        logger.info("[AGENT 6/8] VectorDB 후보 검색 중...")
         candidates = self._search_candidates(embedding, request.limit)
+        logger.info(
+            "[AGENT 6/8] VectorDB 후보 검색 완료 | candidates=%s",
+            len(candidates),
+        )
+        before_filter_count = len(candidates)
         candidates = self._filter_candidates(candidates, histories)
+        logger.info(
+            "[AGENT 7/8] 추천 후보 필터링 완료 | before=%s | after=%s",
+            before_filter_count,
+            len(candidates),
+        )
         scored_candidates = self._rank_candidates(candidates, request.limit)
+        logger.info(
+            "[AGENT 7/8] 추천 후보 랭킹 완료 | ranked=%s",
+            len(scored_candidates),
+        )
+        logger.info("[AGENT 8/8] 추천 사유 생성 및 응답 변환 중...")
         items = self._build_items(scored_candidates, profile)
+        logger.info(
+            "[AGENT 8/8] 추천 사유 생성 및 응답 변환 완료 | items=%s",
+            len(items),
+        )
+        elapsed_seconds = perf_counter() - started_at
+        logger.info(
+            "[AGENT DONE] 추천 Agent workflow 완료 | items=%s | elapsed=%.2fs",
+            len(items),
+            elapsed_seconds,
+        )
         return RecommendationResult(profile.summary, items)
 
     def _prepare_histories(self, histories: list[History]) -> list[History]:
@@ -121,3 +180,12 @@ class Jjjjjk12RecommendationWorkflow:
             scored_candidate.final_score,
             reason,
         )
+
+
+def _preview_text(value: str, max_chars: int = 40) -> str:
+    """데모 로그가 너무 길어지지 않도록 한 줄 요약만 보여준다."""
+
+    text = " ".join(value.split())
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars]}..."

@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 
 from lecture_sync.service import sync_lecture
@@ -15,6 +16,9 @@ EMPTY_HISTORY = "EMPTY_HISTORY"
 INVALID_HISTORY_PAYLOAD = "INVALID_HISTORY_PAYLOAD"
 NO_RECOMMENDATION_FOUND = "NO_RECOMMENDATION_FOUND"
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class RecommendationService:
     def __init__(
@@ -31,7 +35,13 @@ class RecommendationService:
         request_id: str,
         received_at: datetime | None = None,
     ) -> RecommendationResponse:
-        sync_lecture()
+        logger.info(
+            "[REQ] 추천 API 요청 수신 | request_id=%s | histories=%s | limit=%s",
+            request_id,
+            len(request.histories),
+            request.limit,
+        )
+        sync_lecture(request_id=request_id)
         now = received_at or datetime.now(UTC)
         histories = self._normalize_histories(request.histories, now)
         self._history_store.cleanup(now)
