@@ -1,3 +1,5 @@
+import logging
+from time import perf_counter
 from typing import Protocol
 
 from soma_agent.common.errors import SomaAgentError
@@ -28,6 +30,9 @@ REASON_GENERATION_FAILED = "REASON_GENERATION_FAILED"
 RECOMMENDATION_AGENT_FAILED = "RECOMMENDATION_AGENT_FAILED"
 VECTOR_SEARCH_FAILED = "VECTOR_SEARCH_FAILED"
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class RecommendationAgentAdapter(Protocol):
     def recommend(
@@ -48,8 +53,13 @@ class Jjjjjk12RecommendationAgentAdapter:
         limit: int,
         request_id: str,
     ) -> AgentRecommendationResult:
-        del request_id
-
+        started_at = perf_counter()
+        logger.info(
+            "[AGENT] 추천 Agent 호출 시작 | request_id=%s | histories=%s | limit=%s",
+            request_id,
+            len(histories),
+            limit,
+        )
         request = RecommendationRequest(
             histories=[
                 History(
@@ -105,6 +115,13 @@ class Jjjjjk12RecommendationAgentAdapter:
                 500,
             ) from error
 
+        elapsed_seconds = perf_counter() - started_at
+        logger.info(
+            "[AGENT] 추천 Agent 호출 완료 | request_id=%s | items=%s | elapsed=%.2fs",
+            request_id,
+            len(result.items),
+            elapsed_seconds,
+        )
         return AgentRecommendationResult(
             interest_summary=result.interest_summary,
             items=[

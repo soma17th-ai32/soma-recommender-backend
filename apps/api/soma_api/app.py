@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 from uuid import uuid4
 
@@ -14,6 +15,8 @@ from soma_api.errors import (
 )
 from soma_api.routes.health import router as health_router
 from soma_api.routes.recommendations import router as recommendations_router
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
 
 def create_app() -> FastAPI:
